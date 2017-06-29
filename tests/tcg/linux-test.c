@@ -16,6 +16,9 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
+
+typedef int bool;
+
 #define _GNU_SOURCE
 #include <stdarg.h>
 #include <stdlib.h>
@@ -33,12 +36,14 @@
 #include <sys/time.h>
 #include <sys/uio.h>
 #include <sys/socket.h>
+#include <sys/resource.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <sched.h>
 #include <dirent.h>
 #include <setjmp.h>
 #include <sys/shm.h>
+#include "qemu/compiler.h"
 #include "qemu/cutils.h"
 
 #define TESTPATH "/tmp/linux-test.tmp"
