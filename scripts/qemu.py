@@ -80,7 +80,7 @@ class QEMUMachine(object):
         self._qemu_log_path = os.path.join(test_dir, name + ".log")
         self._popen = None
         self._binary = binary
-        self._args = list(args)     # Force copy args in case we modify them
+        self.args = list(args)     # Force copy args in case we modify them
         self._wrapper = wrapper
         self._events = []
         self._iolog = None
@@ -105,8 +105,8 @@ class QEMUMachine(object):
     # This can be used to add an unused monitor instance.
     def add_monitor_telnet(self, ip, port):
         args = 'tcp:%s:%d,server,nowait,telnet' % (ip, port)
-        self._args.append('-monitor')
-        self._args.append(args)
+        self.args.append('-monitor')
+        self.args.append(args)
 
     def add_fd(self, fd, fdset, opaque, opts=''):
         '''Pass a file descriptor to the VM'''
@@ -116,8 +116,8 @@ class QEMUMachine(object):
         if opts:
             options.append(opts)
 
-        self._args.append('-add-fd')
-        self._args.append(','.join(options))
+        self.args.append('-add-fd')
+        self.args.append(','.join(options))
         return self
 
     def send_fd_scm(self, fd_file_path):
@@ -179,7 +179,7 @@ class QEMUMachine(object):
                 '-display', 'none', '-vga', 'none']
 
     def _create_console(self, console_address):
-        for item in self._args:
+        for item in self.args:
             for option in ['isa-serial', 'spapr-vty', 'sclpconsole']:
                 if option in item:
                     return []
@@ -234,7 +234,7 @@ class QEMUMachine(object):
             bargs = self._base_args()
             bargs.extend(self._create_console(console_address))
             self._qemu_full_args = (self._wrapper + [self._binary] +
-                                    bargs + self._args)
+                                    bargs + self.args)
             self._popen = subprocess.Popen(self._qemu_full_args,
                                            stdin=devnull,
                                            stdout=qemulog,
