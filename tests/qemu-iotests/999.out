@@ -1,0 +1,23 @@
+QA output created by 999
+
+=== Writing a qcow header into raw ===
+
+Formatting 'TEST_DIR/t.IMGFMT', fmt=IMGFMT size=67108864
+Formatting 'TEST_DIR/t.raw.src', fmt=IMGFMT size=67108864
+{"return": {}}
+WARNING: Image format was not specified for 'TEST_DIR/t.raw' and probing guessed raw.
+Automatically detecting the format is dangerous for raw images, write operations on block 0 will be restricted.
+Specify the 'raw' format explicitly to remove the restrictions.
+{"return": {}}
+{"timestamp": {"seconds":  TIMESTAMP, "microseconds":  TIMESTAMP}, "event": "BLOCK_JOB_ERROR", "data": {"device": "src", "operation": "write", "action": "report"}}
+{"timestamp": {"seconds":  TIMESTAMP, "microseconds":  TIMESTAMP}, "event": "BLOCK_JOB_COMPLETED", "data": {"device": "src", "len": LEN, "offset": 0, "speed": 0, "type": "mirror", "error": "Operation not permitted"}}
+{"return": []}
+read 65536/65536 bytes at offset 0
+64 KiB, X ops; XX:XX:XX.X (XXX YYY/sec and XXX ops/sec)
+{"return": {}}
+{"return": {}}
+{"timestamp": {"seconds":  TIMESTAMP, "microseconds":  TIMESTAMP}, "event": "BLOCK_JOB_READY", "data": {"device": "src", "len": 1024, "offset": 1024, "speed": 0, "type": "mirror"}}
+{"return": [{"io-status": "ok", "device": "src", "busy": false, "len": 1024, "offset": 1024, "paused": false, "speed": 0, "ready": true, "type": "mirror"}]}
+Warning: Image size mismatch!
+Images are identical.
+*** done
