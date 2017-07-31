@@ -88,6 +88,7 @@ for fmt in qcow qcow2 qed vdi vmdk vpc; do
 
     # When raw was explicitly specified, the same must succeed
     run_qemu "$TEST_IMG" "$TEST_IMG.src" "'format': 'raw'," "BLOCK_JOB_READY"
+    lslocks | grep $TEST_IMG
     $QEMU_IMG compare -f raw -F raw "$TEST_IMG" "$TEST_IMG.src"
 
 done
@@ -110,6 +111,7 @@ for sample_img in empty.bochs iotest-dirtylog-10G-4M.vhdx parallels-v1 \
     $QEMU_IO -c 'read -P 0 0 64k' "$TEST_IMG" | _filter_qemu_io
 
     run_qemu "$TEST_IMG" "$TEST_IMG.src" "'format': 'raw'," "BLOCK_JOB_READY"
+    lslocks | grep $TEST_IMG
     $QEMU_IMG compare -f raw -F raw "$TEST_IMG" "$TEST_IMG.src"
 done
 
@@ -122,9 +124,11 @@ for sample_img in grub_mbr.raw; do
     bzcat "$SAMPLE_IMG_DIR/$sample_img.bz2" > "$TEST_IMG.src"
 
     run_qemu "$TEST_IMG" "$TEST_IMG.src" "" "BLOCK_JOB_READY"
+    lslocks | grep $TEST_IMG
     $QEMU_IMG compare -f raw -F raw "$TEST_IMG" "$TEST_IMG.src"
 
     run_qemu "$TEST_IMG" "$TEST_IMG.src" "'format': 'raw'," "BLOCK_JOB_READY"
+    lslocks | grep $TEST_IMG
     $QEMU_IMG compare -f raw -F raw "$TEST_IMG" "$TEST_IMG.src"
 done
 
