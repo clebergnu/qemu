@@ -297,7 +297,7 @@ class _VM(qemu.QEMUMachine):
         console = aexpect.ShellSession(nc_cmd)
         try:
             logging.info('Console: Waiting login prompt...')
-            _handle_prompts(console, self.username, self.password, "[\#\$]")
+            _handle_prompts(console, self.username, self.password, prompt)
             logging.info('Console: Ready!')
         except:
             console.close()
