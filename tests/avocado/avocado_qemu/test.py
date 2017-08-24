@@ -270,7 +270,7 @@ class _VM(qemu.QEMUMachine):
         self.password = password
         super(_VM, self).__init__(qemu_bin, name=self.name, arch=arch)
 
-    def get_console(self, console_address=None, prompt="[\#\$]"):
+    def get_console(self, console_address=None, prompt=r"[\#\$] "):
         """
         :param address: Socket address, can be either a unix socket path
                         (string) or a tuple in the form (address, port)
