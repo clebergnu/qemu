@@ -18,6 +18,7 @@ import os
 import sys
 import subprocess
 import qmp.qmp
+import tempfile
 
 
 LOG = logging.getLogger(__name__)
@@ -54,7 +55,7 @@ class QEMUMachine(object):
 
     def __init__(self, binary, args=None, wrapper=None, name=None,
                  test_dir="/var/tmp", monitor_address=None,
-                 socket_scm_helper=None):
+                 socket_scm_helper=None, arch=None):
         '''
         Initialize a QEMUMachine
 
@@ -86,6 +87,10 @@ class QEMUMachine(object):
         self._socket_scm_helper = socket_scm_helper
         self._qmp = None
         self._qemu_full_args = None
+        if arch is None:
+            arch = binary.split('-')[-1]
+        self._arch = arch
+        self._console_address = None
 
         # just in case logging wasn't configured by the main script:
         logging.basicConfig()
@@ -173,6 +178,39 @@ class QEMUMachine(object):
                 '-mon', 'chardev=mon,mode=control',
                 '-display', 'none', '-vga', 'none']
 
+    def _create_console(self, console_address):
+        for item in self._args:
+            for option in ['isa-serial', 'spapr-vty', 'sclpconsole']:
+                if option in item:
+                    return []
+
+        chardev = 'socket,id=console,{address},server,nowait'
+        if console_address is None:
+            console_address = tempfile.mktemp()
+            chardev = chardev.format(address='path=%s' %
+                                     console_address)
+        elif isinstance(console_address, tuple):
+            chardev = chardev.format(address='host=%s,port=%s' %
+                                     (console_address[0],
+                                     console_address[1]))
+        else:
+            chardev = chardev.format(address='path=%s' % console_address)
+
+        self._console_address = console_address
+
+        device = '{dev_type},chardev=console'
+        if '86' in self._arch:
+            device = device.format(dev_type='isa-serial')
+        elif 'ppc' in self._arch:
+            device = device.format(dev_type='spapr-vty')
+        elif 's390x' in self._arch:
+            device = device.format(dev_type='sclpconsole')
+        else:
+            return []
+
+        return ['-chardev', chardev,
+                '-device', device]
+
     def _pre_launch(self):
         self._qmp = qmp.qmp.QEMUMonitorProtocol(self._monitor_address,
                                                 server=True)
@@ -185,7 +223,7 @@ class QEMUMachine(object):
             self._remove_if_exists(self._monitor_address)
         self._remove_if_exists(self._qemu_log_path)
 
-    def launch(self):
+    def launch(self, console_address=None):
         '''Launch the VM and establish a QMP connection'''
         self._iolog = None
         self._qemu_full_args = None
@@ -193,8 +231,10 @@ class QEMUMachine(object):
         qemulog = open(self._qemu_log_path, 'wb')
         try:
             self._pre_launch()
+            bargs = self._base_args()
+            bargs.extend(self._create_console(console_address))
             self._qemu_full_args = (self._wrapper + [self._binary] +
-                                    self._base_args() + self._args)
+                                    bargs + self._args)
             self._popen = subprocess.Popen(self._qemu_full_args,
                                            stdin=devnull,
                                            stdout=qemulog,
