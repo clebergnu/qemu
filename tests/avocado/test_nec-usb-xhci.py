@@ -23,6 +23,10 @@ class TestNecUsbXhci(test.QemuTest):
 
         # Fedora Cloud Image has default username 'fedora'
         self.vm.add_image(self.image.path, 'fedora', 'fedora', snapshot=False)
+
+        # Fedora Cloud Image has no password for user fedora. Calling
+        # cloudinit() to set the password as defined in add_image()
+        self.vm.cloudinit()
         usbdevice = os.path.join(self.workdir, 'usb.img')
         process.run('dd if=/dev/zero of=%s bs=1M count=10' % usbdevice)
         self.vm.args.extend(['-device', 'pci-bridge,id=bridge1,chassis_nr=1'])

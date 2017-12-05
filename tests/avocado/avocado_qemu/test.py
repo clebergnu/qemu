@@ -28,6 +28,7 @@ import logging
 import os
 import re
 import sys
+import tempfile
 import time
 import uuid
 
@@ -77,6 +78,12 @@ class QEMUConsoleError(Exception):
 
 
 class QEMUMigrationError(Exception):
+    """
+    If some error with the migration happens
+    """
+
+
+class QEMUCloudinitError(Exception):
     """
     If some error with the migration happens
     """
@@ -378,6 +385,49 @@ class _VM(qemu.QEMUMachine):
 
         if password is not None:
             self.password = password
+
+    def cloudinit(self, hostname=None, password=None):
+        """
+        Creates a CDROM Iso Image with the required cloudinit files
+        (meta-data and user-data) to make the initial Cloud Image
+        configuration, attaching the CDROM to the VM.
+
+        :param: hostname: The hostname to configure the image with
+        :param password: The password to configure the default user with
+        """
+        try:
+            geniso_bin = utils_path.find_command('genisoimage')
+        except:
+            raise QEMUCloudinitError('Command not found (genisoimage)')
+
+        if hostname is None:
+            hostname = self.name
+
+        if password is None:
+            password = self.password
+
+        data_dir = tempfile.mkdtemp()
+
+        metadata_path = os.path.join(data_dir, 'meta-data')
+        metadata_content = ("instance-id: %s\n"
+                            "local-hostname: %s\n" % (hostname, hostname))
+        with open(metadata_path, 'w') as metadata_file:
+            metadata_file.write(metadata_content)
+
+        userdata_path = os.path.join(data_dir, 'user-data')
+        userdata_content = ("#cloud-config\n"
+                            "password: %s\n"
+                            "ssh_pwauth: True\n"
+                            "chpasswd: { expire: False }\n" % password)
+        with open(userdata_path, 'w') as userdata_file:
+            userdata_file.write(userdata_content)
+
+        iso_path = os.path.join(data_dir, 'cdrom.iso')
+        process.run("%s -output %s -volid cidata -joliet -rock %s %s" %
+                    (geniso_bin, iso_path, metadata_path, userdata_path))
+
+        self.args.extend(['-cdrom', iso_path])
+
 
 class QemuTest(Test):
 

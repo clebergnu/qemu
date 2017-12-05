@@ -27,6 +27,10 @@ class TestNumaHotplug(test.QemuTest):
         # Fedora Cloud Image has default username 'fedora'
         self.vm.add_image(self.image.path, 'fedora', 'fedora', snapshot=False)
 
+        # Fedora Cloud Image has no password for user fedora. Calling
+        # cloudinit() to set the password as defined in add_image()
+        self.vm.cloudinit()
+
         self.vm.args.extend(["-m", "4G,slots=208,maxmem=80G"])
         self.vm.args.extend(["-numa", "node"] * 16)
         self.vm.launch()
