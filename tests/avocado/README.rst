@@ -59,16 +59,6 @@ file using the Avocado parameters system:
 - ``arch``: Probe the Qemu binary from a given architecture. It has no
   effect if ``qemu_bin`` is specified. If not provided, the binary probe
   will use the system architecture. Example: ``arch: x86_64``
-- ``image_path``: When a test requires (usually a bootable) image, this
-  parameter is used to define where the image is located. When undefined
-  it uses ``$QEMU_ROOT/bootable_image_$arch.qcow2``. The image is added
-  to the qemu command __only__ when the test requires an image. By
-  default ``,snapshot=on`` is used, but it can be altered by
-  ``image_snapshot`` parameter.
-- ``image_user`` and ``image_pass``: When using a ``image_path``, if you
-  want to get the console from the Guest OS you have to define the Guest
-  OS credentials. Example: ``image_user: root`` and
-  ``image_pass: p4ssw0rd``. By default it uses ``root`` and ``123456``.
 - ``machine_type``: Use this option to define a machine type for the VM.
   Example: ``machine_type: pc``
 - ``machine_accel``: Use this option to define a machine acceleration
@@ -90,6 +80,7 @@ for each parameter. Using the YAML tag ``!mux`` Avocado will execute the
 tests once per combination of parameters. Example::
 
     $ cat variants.yaml
+    qemu_bin: /usr/libexec/qemu-kvm
     architecture: !mux
         x86_64:
             arch: x86_64
@@ -100,14 +91,102 @@ Run it the with::
 
     $ avocado run test_my_test.py -m variants.yaml
 
-You can use both the parameters file and the variants file in the same
-command line::
-
-    $ avocado run test_my_test.py -m parameters.yaml variants.yaml
-
-Avocado will then merge the parameters from both files and create the
-proper variants.
-
 See ``avocado run --help`` and ``man avocado`` for several other
 options, such as ``--filter-by-tags``, ``--show-job-log``,
 ``--failfast``, etc.
+
+Adding an Guest OS Image
+------------------------
+
+We have some APIs to help with the Guest OS Image management and use. To add
+an image in your VM, you can call the ``add_image()`` method::
+
+    from avocado_qemu import test
+
+    class MyTest(test.QemuTest):
+        """
+        :avocado: enable
+        """
+
+        def setUp(self):
+            image_path = '/var/lib/images/guestos.qcow2'
+            user = 'root'
+            pass = '123456'
+            self.vm.add_image(image_path, user, pass)
+            self.vm.args.extend(['-m', '512'])
+            self.vm.launch()
+
+If you don't have an Image, you can use the ``vmimage`` module from Avocado
+Framework utils, which will download and cache a Cloud Image from your
+preferred distro, according to the provided parameters. Example::
+
+    >>> from avocado.utils import vmimage
+    >>> image = vmimage.get('Fedora', arch='x86_64')
+    >>> image
+    <Image name=Fedora version=27 arch=x86_64>
+    >>> image.path
+    '/tmp/Fedora-Cloud-Base-27-1.6.x86_64-9853f34e.qcow2'
+
+Refer to the ``vmimage`` documentation for more information:
+http://avocado-framework.readthedocs.io/en/latest/utils/vmimage.html
+
+If you're using the ``vmimage`` utility, you're getting a Cloud Image, which
+requires the default user password to be set using CloudInit. To cope with
+that requirement, the Avocado Qemu includes to the VM object the
+``cloudinit()`` method. This simple API will attach to the VM a CDROM with the
+required files containing the default user password, as set by the
+``add_image()``. Putting all together::
+
+    from avocado_qemu import test
+    from avocado.utils import vmimage
+
+    class MyTest(test.QemuTest):
+        """
+        :avocado: enable
+        """
+
+        def setUp(self):
+            image = vmimage.get('Fedora')
+
+            # Fedora Cloud Image comes with default user 'fedora'
+            user = 'fedora'
+
+            # Fedora Cloud Image password needs to be set using CouldInit
+            pass = '123456'
+
+            # vmimage.path is already a external snapshot
+            # No need add the ',snapshot=on' to the disk
+            self.vm.add_image(image.path, user, pass, snapshot=False)
+
+            # Adding the CloudInit CDROM to set the password
+            self.vm.cloudinit()
+
+            self.vm.args.extend(['-m', '512'])
+            self.vm.launch()
+
+        ...
+
+Adding a Qemu Machine
+---------------------
+
+If not using the parameters YAML file, which has precedence, you can add the
+``-machine`` option to the Qemu command line using the ``add_machine()``
+method. Example::
+
+    from avocado_qemu import test
+
+    class MyTest(test.QemuTest):
+        """
+        :avocado: enable
+        """
+
+        def setUp(self):
+            self.vm.add_machine(machine_type='pc', machine_accel='kvm')
+
+            self.vm.args.extend(['-m', '512'])
+            self.vm.launch()
+
+        ...
+
+The call above will result in ``-machine pc,accel=kvm`` added to the Qemu
+command line.
