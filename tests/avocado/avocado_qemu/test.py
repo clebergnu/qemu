@@ -386,6 +386,34 @@ class _VM(qemu.QEMUMachine):
         if password is not None:
             self.password = password
 
+    def add_machine(self, machine_type=None, machine_accel=None,
+                    machine_kvm_type=None):
+        """
+        Adds the '-machine' command line option and its parameters
+        to the Qemu VM
+
+        :param machine_type: The machine type to be used (i.e. pc)
+        :param machine_accel: The machine acceleration to be use (i.e. kvm)
+        :param machine_kvm_type: If using kvm, the kvm type (i.e. PR)
+        """
+        if '-machine' in self.args:
+            logging.error('Option -machine already present')
+            return
+
+        machine = []
+        if machine_type is not None:
+            machine.append(machine_type)
+        if machine_accel is not None:
+            machine.append("accel=%s" % machine_accel)
+        if machine_kvm_type is not None:
+            machine.append("kvm-type=%s" % machine_kvm_type)
+
+        if not machine:
+            logging.error('Option -machine needs argument')
+            return
+
+        self.args.extend(['-machine', ','.join(machine)])
+
     def cloudinit(self, hostname=None, password=None):
         """
         Creates a CDROM Iso Image with the required cloudinit files
@@ -443,13 +471,5 @@ class QemuTest(Test):
         machine_type = self.params.get('machine_type')
         machine_accel = self.params.get('machine_accel')
         machine_kvm_type = self.params.get('machine_kvm_type')
-        machine = ""
-        if machine_type is not None:
-            machine += "%s," % machine_type
-        if machine_accel is not None:
-            machine += "accel=%s," % machine_accel
-        if machine_kvm_type is not None:
-            machine += "kvm-type=%s," % machine_kvm_type
-        if machine:
-            self.vm.args.extend(['-machine', machine])
-
+        if any((machine_type, machine_accel, machine_kvm_type)):
+            self.vm.add_machine(machine_type, machine_accel, machine_kvm_type)

@@ -33,6 +33,9 @@ class TestNecUsbXhci(test.QemuTest):
         self.vm.args.extend(['-device', 'nec-usb-xhci,id=xhci1,bus=bridge1,addr=0x3'])
         self.vm.args.extend(['-drive', 'file=%s,format=raw,id=drive_usb,if=none' % usbdevice])
         self.vm.args.extend(['-device', 'usb-storage,drive=drive_usb,id=device_usb,bus=xhci1.0'])
+
+        # Using KVM
+        self.vm.add_machine(machine_accel='kvm')
         self.vm.launch()
 
     def test_available_after_migration(self):
