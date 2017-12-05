@@ -18,6 +18,8 @@ class TestNecUsbXhci(test.QemuTest):
     """
 
     def setUp(self):
+        self.vm_dst = None
+
         # Getting latest Fedora Cloud Image
         self.image = vmimage.get('Fedora')
 
@@ -27,6 +29,8 @@ class TestNecUsbXhci(test.QemuTest):
         # Fedora Cloud Image has no password for user fedora. Calling
         # cloudinit() to set the password as defined in add_image()
         self.vm.cloudinit()
+
+        # Creating and attaching a USB Storage Device to the VM
         usbdevice = os.path.join(self.workdir, 'usb.img')
         process.run('dd if=/dev/zero of=%s bs=1M count=10' % usbdevice)
         self.vm.args.extend(['-device', 'pci-bridge,id=bridge1,chassis_nr=1'])
@@ -36,6 +40,10 @@ class TestNecUsbXhci(test.QemuTest):
 
         # Using KVM
         self.vm.add_machine(machine_accel='kvm')
+
+        # Boosting VM memory as we have a Guest OS to interact with
+        self.vm.args.extend(['-m', '1024'])
+
         self.vm.launch()
 
     def test_available_after_migration(self):
@@ -48,15 +56,14 @@ class TestNecUsbXhci(test.QemuTest):
         :avocado: tags=migration,RHBZ1436616
         """
         console = self.vm.get_console()
-        console.sendline('fdisk -l')
+        console.sendline('sudo fdisk -l')
         result = console.read_nonblocking()
         console.close()
         self.assertIn('Disk /dev/sdb: 10 MiB, 10485760 bytes, 20480 sectors',
                       result)
-
         self.vm_dst = self.vm.migrate()
         console = self.vm_dst.get_console()
-        console.sendline('fdisk -l')
+        console.sendline('sudo fdisk -l')
         result = console.read_nonblocking()
         console.close()
         self.assertIn('Disk /dev/sdb: 10 MiB, 10485760 bytes, 20480 sectors',
@@ -64,4 +71,6 @@ class TestNecUsbXhci(test.QemuTest):
 
     def tearDown(self):
         self.vm.shutdown()
-        self.vm_dst.shutdown()
+        if self.vm_dst is not None:
+            self.vm_dst.shutdown()
+        os.remove(self.image.path)
