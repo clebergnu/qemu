@@ -4,6 +4,7 @@ import tempfile
 
 from avocado_qemu import test
 from avocado.utils import process
+from avocado.utils import vmimage
 
 class TestNecUsbXhci(test.QemuTest):
     """
@@ -17,8 +18,12 @@ class TestNecUsbXhci(test.QemuTest):
     """
 
     def setUp(self):
+        # Getting latest Fedora Cloud Image
+        self.image = vmimage.get('Fedora')
+
+        # Fedora Cloud Image has default username 'fedora'
+        self.vm.add_image(self.image.path, 'fedora', 'fedora', snapshot=False)
         usbdevice = os.path.join(self.workdir, 'usb.img')
-        self.request_image()
         process.run('dd if=/dev/zero of=%s bs=1M count=10' % usbdevice)
         self.vm.args.extend(['-device', 'pci-bridge,id=bridge1,chassis_nr=1'])
         self.vm.args.extend(['-device', 'nec-usb-xhci,id=xhci1,bus=bridge1,addr=0x3'])

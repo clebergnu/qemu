@@ -262,8 +262,7 @@ class _PortTracker(Borg):
 class _VM(qemu.QEMUMachine):
     '''A QEMU VM'''
 
-    def __init__(self, qemu_bin=None, arch=None, username=None, password=None,
-                 qemu_dst_bin=None):
+    def __init__(self, qemu_bin=None, arch=None, qemu_dst_bin=None):
         if arch is None:
             arch = os.uname()[4]
         self.arch = arch
@@ -275,8 +274,8 @@ class _VM(qemu.QEMUMachine):
             qemu_dst_bin = qemu_bin
         self.qemu_bin = qemu_bin
         self.qemu_dst_bin = qemu_dst_bin
-        self.username = username
-        self.password = password
+        self.username = None
+        self.password = None
         super(_VM, self).__init__(qemu_bin, name=self.name, arch=arch)
         logging.getLogger('QMP').setLevel(logging.INFO)
 
@@ -287,6 +286,9 @@ class _VM(qemu.QEMUMachine):
                         for a TCP connection
         :param prompt: The regex to identify we reached the prompt.
         """
+
+        if not all((self.username, self.password)):
+            raise QEMUConsoleError('Username or password not set.')
 
         if not self.is_running():
             raise QEMUConsoleError('VM is not running.')
@@ -327,9 +329,11 @@ class _VM(qemu.QEMUMachine):
             return False
 
         port = self.ports.find_free_port()
-        newvm = _VM(self.qemu_dst_bin, self._arch, self.username, self.password)
+        newvm = _VM(self.qemu_dst_bin, self._arch)
         newvm.args = self.args
         newvm.args.extend(['-incoming', 'tcp:0:%s' % port])
+        newvm.username = self.username
+        newvm.password = self.password
 
         newvm.launch(console_address)
         cmd = 'migrate -d tcp:0:%s' % port
@@ -343,6 +347,37 @@ class _VM(qemu.QEMUMachine):
 
         return newvm
 
+    def add_image(self, path, username=None, password=None, snapshot=True,
+                  extra=None):
+        """
+        Adds the '-drive' command line option and its parameters to
+        the Qemu VM
+
+        :param path: Image path (i.e. /var/lib/images/guestos.qcow2)
+        :param username: The username to login into the Guest OS with
+        :param password: The password to login into the Guest OS with
+        :param snapshot: Whether the parameter snapshot=on will be used
+        :param extra: Extra parameters to the -drive option
+        """
+        file_option = 'file=%s' % path
+        for item in self.args:
+            if file_option in item:
+                logging.error('Image %s already present', path)
+                return
+
+        if extra is not None:
+            file_option += ',%s' % extra
+
+        if snapshot:
+            file_option += ',snapshot=on'
+
+        self.args.extend(['-drive', file_option])
+
+        if username is not None:
+            self.username = username
+
+        if password is not None:
+            self.password = password
 
 class QemuTest(Test):
 
@@ -353,8 +388,6 @@ class QemuTest(Test):
                                        job=job, runner_queue=runner_queue)
         self.vm = _VM(qemu_bin=self.params.get('qemu_bin'),
                       arch=self.params.get('arch'),
-                      username=self.params.get('image_user', default="root"),
-                      password=self.params.get('image_pass', default="123456"),
                       qemu_dst_bin=self.params.get('qemu_dst_bin'))
 
         machine_type = self.params.get('machine_type')
@@ -370,35 +403,3 @@ class QemuTest(Test):
         if machine:
             self.vm.args.extend(['-machine', machine])
 
-    def request_image(self, path=None, snapshot=None, extra=None):
-        """
-        Add image to the `self.vm` using params or arguments.
-
-        Unless it's overridden by arguments it uses following test params
-        to specify the image:
-
-        * image_path - defines the path to the user-image. If not specified
-                       it uses "QEMU_ROOT/boot_image_$arch.qcow2"
-        * image_snapshot - whether to use "snapshot=on" (snapshot=off is not
-                           supplied)
-        * image_extra - free-form string to extend the "-drive" params
-
-        :param path: Override the path ("image_path" param is used otherwise)
-        :param snapshot: Override the usage of snapshot
-        :param extra: Extra arguments to be added to drive definition
-        """
-        if snapshot is None:
-            snapshot = self.params.get("image_snapshot", default=True)
-        if extra is None:
-            extra = self.params.get("image_extra", default="")
-        if path is None:
-            path = self.params.get("image_path")
-            if path is None:
-                arch = self.vm.arch
-                path = os.path.join(QEMU_ROOT, "boot_image_%s.qcow2" % arch)
-        if not os.path.exists(path):
-            self.error("Require a bootable image, which was not found. "
-                       "Please provide one in '%s'." % path)
-        if snapshot:
-            extra += ",snapshot=on"
-        self.vm.args.extend(['-drive', 'file=%s%s' % (path, extra)])
