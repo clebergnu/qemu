@@ -45,13 +45,16 @@ endif
 .git-submodule-status: git-submodule-update config-host.mak
 
 # Rules related to Avocado bootstrap start here
-.PHONY: pip avocado
+.PHONY: pip avocado avocado-tests
 
 pip:
 	$(PYTHON) -m pip --version 2>/dev/null || $(PYTHON) -c "import os; import sys; import urllib; f = urllib.urlretrieve('https://bootstrap.pypa.io/get-pip.py')[0]; os.system('%s %s --user' % (sys.executable, f))"
 
 avocado: pip
 	$(PYTHON) -m pip install --user avocado-framework avocado-framework-plugin-varianter-yaml-to-mux aexpect
+
+avocado-tests: avocado
+	avocado run tests/avocado
 
 # Check that we're not trying to do an out-of-tree build from
 # a tree that's been used for an in-tree build.
