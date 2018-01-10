@@ -44,6 +44,12 @@ endif
 
 .git-submodule-status: git-submodule-update config-host.mak
 
+# Rules related to Avocado bootstrap start here
+.PHONY: pip
+
+pip:
+	$(PYTHON) -m pip --version 2>/dev/null || $(PYTHON) -c "import os; import sys; import urllib; f = urllib.urlretrieve('https://bootstrap.pypa.io/get-pip.py')[0]; os.system('%s %s --user' % (sys.executable, f))"
+
 # Check that we're not trying to do an out-of-tree build from
 # a tree that's been used for an in-tree build.
 ifneq ($(realpath $(SRC_PATH)),$(realpath .))
@@ -585,6 +591,7 @@ clean:
 	rm -f $$d/qemu-options.def; \
         done
 	rm -f $(SUBDIR_DEVICES_MAK) config-all-devices.mak
+	- pip uninstall -y pip
 
 VERSION ?= $(shell cat VERSION)
 
