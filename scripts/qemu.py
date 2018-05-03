@@ -24,6 +24,23 @@ import tempfile
 LOG = logging.getLogger(__name__)
 
 
+#: Maps architectures to the preferred console device types
+CONSOLE_DEVICE_TYPES_BY_ARCH = {
+    'x86_64': 'isa-serial',
+    'ppc64': 'spapr-vty',
+
+    # For s390x, there can only be a single console.  Attempting to have more
+    # than one results in the following command line error message:
+    #
+    # Multiple VT220 operator consoles are not supported
+    # SCLP event initialization failed.
+    #
+    # This requires '-nodefaults' to be used, to prevent the default console
+    # to be activated.
+    's390x': 'sclpconsole'
+    }
+
+
 class QEMUMachineError(Exception):
     """
     Exception called when an error in QEMUMachine happens.
