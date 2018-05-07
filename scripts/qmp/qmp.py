@@ -30,6 +30,12 @@ class QMPTimeoutError(QMPError):
     pass
 
 
+class QMPDataError(QMPError):
+    """
+    Raised when the received data is not valid according to the QMP protocol
+    """
+
+
 class QEMUMonitorProtocol(object):
 
     #: Logger object for debugging messages
@@ -78,7 +84,10 @@ class QEMUMonitorProtocol(object):
             data = self.__sockfile.readline()
             if not data:
                 return
-            resp = json.loads(data)
+            try:
+                resp = json.loads(data)
+            except ValueError as e:
+                raise QMPDataError(e)
             if 'event' in resp:
                 self.logger.debug("<<< %s", resp)
                 self.__events.append(resp)
