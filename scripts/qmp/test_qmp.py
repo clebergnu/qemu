@@ -45,6 +45,13 @@ class QMP(unittest.TestCase):
         self.server, client = self._start_server_client(Handler)
         self.assertRaises(qmp.QMPDataError, client.connect)
 
+    def test_no_greeting(self):
+        class Handler(socketserver.BaseRequestHandler):
+            def handle(self):
+                self.request.sendall(b'{}')
+        self.server, client = self._start_server_client(Handler)
+        self.assertRaises(qmp.QMPConnectError, client.connect, True)
+
 
 if __name__ == '__main__':
     unittest.main()
