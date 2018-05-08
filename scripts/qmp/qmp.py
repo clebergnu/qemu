@@ -75,7 +75,7 @@ class QEMUMonitorProtocol(object):
             raise QMPConnectError
         # Greeting seems ok, negotiate capabilities
         resp = self.cmd('qmp_capabilities')
-        if "return" in resp:
+        if resp is not None and "return" in resp:
             return greeting
         raise QMPCapabilitiesError
 

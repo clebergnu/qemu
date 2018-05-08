@@ -52,6 +52,15 @@ class QMP(unittest.TestCase):
         self.server, client = self._start_server_client(Handler)
         self.assertRaises(qmp.QMPConnectError, client.connect, True)
 
+    def test_greeting_no_capabilities(self):
+        class Handler(socketserver.BaseRequestHandler):
+            def handle(self):
+                self.request.sendall(b'{"QMP": {"version": {"qemu": {"micro": '
+                                     '0, "minor": 99, "major": 9}, "package": '
+                                     '"v9.99.0"}, "capabilities": []}}')
+        self.server, client = self._start_server_client(Handler)
+        self.assertRaises(qmp.QMPCapabilitiesError, client.connect, True)
+
 
 if __name__ == '__main__':
     unittest.main()
