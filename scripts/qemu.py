@@ -43,6 +43,54 @@ class MonitorResponseError(qmp.qmp.QMPError):
         self.reply = reply
 
 
+def qmp_execute(binary_path, qmp_command):
+    """
+    Executes a QMP command on a given QEMU binary
+
+    Useful for one-off execution of QEMU binaries to get runtime
+    information.
+
+    @param binary_path: path to a QEMU binary
+    @param qmp_command: the QMP command
+    @note: passing arguments to the QMP command is not supported at
+           this time.
+    """
+    try:
+        tempdir = tempfile.mkdtemp()
+        monitor_socket = os.path.join(tempdir, 'monitor.sock')
+        args = [binary_path, '-nodefaults', '-machine', 'none',
+                '-nographic', '-S', '-qmp', 'unix:%s' % monitor_socket]
+        monitor = qmp.qmp.QEMUMonitorProtocol(monitor_socket, True)
+        try:
+            qemu_proc = subprocess.Popen(args,
+                                         stdin=subprocess.PIPE,
+                                         stdout=subprocess.PIPE,
+                                         stderr=None,
+                                         universal_newlines=True)
+        except OSError:
+            return None
+        monitor.accept()
+        res = monitor.cmd(qmp_command)
+        monitor.cmd("quit")
+        qemu_proc.wait()
+        monitor.close()
+        return res.get("return", None)
+    finally:
+        shutil.rmtree(tempdir)
+
+
+def qemu_bin_arch(binary_path):
+    """
+    Probes the architecture from the QEMU binary
+
+    @returns: either the probed arch or None
+    @rtype: str or None
+    """
+    res = qmp_execute(binary_path, "query-target")
+    if res is not None:
+        return res.get("arch", None)
+
+
 class QEMUMachine(object):
     '''A QEMU VM
 
@@ -55,7 +103,7 @@ class QEMUMachine(object):
 
     def __init__(self, binary, args=None, wrapper=None, name=None,
                  test_dir="/var/tmp", monitor_address=None,
-                 socket_scm_helper=None):
+                 socket_scm_helper=None, arch=None, automatic_devices=False):
         '''
         Initialize a QEMUMachine
 
@@ -66,6 +114,14 @@ class QEMUMachine(object):
         @param test_dir: where to create socket and log file
         @param monitor_address: address for QMP monitor
         @param socket_scm_helper: helper program, required for send_fd_scm()"
+        @param arch: the intended architecture, which can influence the
+                     behavior of methods that add architecture specific
+                     options. If not set, and automatic_devices options is
+                     True, it will be guessed from the queried from the qemu
+                     binary itself.
+        @param automatic_devices: wether to automatically set some attributes
+                                  and command line arguments based on
+                                  environment and probes.
         @note: Qemu process is not started until launch() is used.
         '''
         if args is None:
@@ -91,6 +147,9 @@ class QEMUMachine(object):
         self._test_dir = test_dir
         self._temp_dir = None
         self._launched = False
+        if arch is None and automatic_devices:
+            arch = qemu_bin_arch(binary)
+        self._arch = arch
 
         # just in case logging wasn't configured by the main script:
         logging.basicConfig()
