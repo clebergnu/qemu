@@ -19,6 +19,9 @@ class QMPServerUnix(socketserver.ThreadingMixIn,
 
 class QMP(unittest.TestCase):
 
+    GREETING = (b'{"QMP": {"version": {"qemu": {"micro": 0, "minor": 99, '
+                b'"major": 9}, "package": "v9.99.0"}, "capabilities": []}}')
+
     def _start_server_client(self, handler_class):
         address = os.path.join(self.tmpdir, 'mon.sock')
         server = QMPServerUnix(address, handler_class)
@@ -52,12 +55,21 @@ class QMP(unittest.TestCase):
         self.server, client = self._start_server_client(Handler)
         self.assertRaises(qmp.QMPConnectError, client.connect, True)
 
+    def test_greeting(self):
+        class Handler(socketserver.BaseRequestHandler):
+            def handle(self):
+                self.request.sendall(QMP.GREETING)
+        self.server, client = self._start_server_client(Handler)
+        try:
+            greeting = client.connect(False)
+        except qmp.QMPConnectError:
+            self.fail("No QMP greeting recognized by the client")
+        self.assertIn(u"QMP", greeting)
+
     def test_greeting_no_capabilities(self):
         class Handler(socketserver.BaseRequestHandler):
             def handle(self):
-                self.request.sendall(b'{"QMP": {"version": {"qemu": {"micro": '
-                                     '0, "minor": 99, "major": 9}, "package": '
-                                     '"v9.99.0"}, "capabilities": []}}')
+                self.request.sendall(QMP.GREETING)
         self.server, client = self._start_server_client(Handler)
         self.assertRaises(qmp.QMPCapabilitiesError, client.connect, True)
 
