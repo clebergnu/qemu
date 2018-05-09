@@ -56,7 +56,6 @@ class QEMUMonitorProtocol(object):
         self.__events = []
         self.__address = address
         self.__sock = self.__get_sock()
-        self.__sockfile = None
         if server:
             self.__sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self.__sock.bind(self.__address)
@@ -71,7 +70,12 @@ class QEMUMonitorProtocol(object):
 
     def __json_read(self, only_event=False):
         while True:
-            data = self.__sockfile.readline()
+            # QEMU will currently append the JSON response with a '\r\n'
+            # but there's nothing in the documentation that mandates that
+            # behavior.  Also, the only reason __sockfile is used is to
+            # attemp to read a complete line, but this can be done quite
+            # simply using the socket itself.
+            data = self.__sock.recv()
             if not data:
                 return
             try:
@@ -145,7 +149,6 @@ class QEMUMonitorProtocol(object):
         @raise QMPCapabilitiesError if fails to negotiate capabilities
         """
         self.__sock.connect(self.__address)
-        self.__sockfile = self.__sock.makefile()
         greeting = self.receive_greeting()
         if not negotiate:
             return greeting
@@ -162,7 +165,6 @@ class QEMUMonitorProtocol(object):
         """
         self.__sock.settimeout(15)
         self.__sock, _ = self.__sock.accept()
-        self.__sockfile = self.__sock.makefile()
         greeting = self.receive_greeting()
         if not negotiate:
             return greeting
