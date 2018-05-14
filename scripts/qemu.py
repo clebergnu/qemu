@@ -26,9 +26,21 @@ LOG = logging.getLogger(__name__)
 
 #: Maps architectures to the preferred console device types
 CONSOLE_DEVICE_TYPES_BY_ARCH = {
-    'x86_64': 'isa-serial',
-    'ppc64': 'spapr-vty',
+    'xtensa': None,
+    'xtensaeb': None,
+    'hppa': None,
+    'microblaze': None,
+    'mips': None,
+    'mips64el': None,
+    'riscv64': None,
+    'sparc': None,
+    'i386': None,
+    'alpha': None,
+    'lm32': None,
+    'moxie': None,
+    'ppcemb': None,
 
+    'ppc64': 'spapr-vty',
     # For s390x, there can only be a single console.  Attempting to have more
     # than one results in the following command line error message:
     #
@@ -37,7 +49,7 @@ CONSOLE_DEVICE_TYPES_BY_ARCH = {
     #
     # This requires '-nodefaults' to be used, to prevent the default console
     # to be activated.
-    's390x': 'sclpconsole'
+    #'s390x': 'sclpconsole'
     }
 
 
@@ -164,7 +176,12 @@ class QEMUMachine(object):
         self._test_dir = test_dir
         self._temp_dir = None
         self._launched = False
-        if arch is None and automatic_devices:
+        self._automatic_devices = automatic_devices
+        if self._automatic_devices:
+            self._auto_args = ['-nodefaults', '-machine', 'none']
+        else:
+            self._auto_args = []
+        if arch is None and self._automatic_devices:
             arch = qemu_bin_arch(binary)
         self._arch = arch
 
@@ -255,6 +272,18 @@ class QEMUMachine(object):
                 '-mon', 'chardev=mon,mode=control',
                 '-display', 'none', '-vga', 'none']
 
+    def _get_auto_console(self):
+        """
+        Returns the arguments for an automatically created console
+        """
+        _, self._console_address = tempfile.mkstemp(dir=self._temp_dir)
+        chardev = 'socket,id=console,path=%s,server,nowait' % self._console_address
+        device_type = CONSOLE_DEVICE_TYPES_BY_ARCH.get(self._arch, 'isa-serial')
+        if device_type is None:
+            return []
+        device = '%s,chardev=console' % device_type
+        return ['-chardev', chardev, '-device', device]
+
     def _pre_launch(self):
         self._temp_dir = tempfile.mkdtemp(dir=self._test_dir)
         if self._monitor_address is not None:
@@ -310,8 +339,11 @@ class QEMUMachine(object):
         '''Launch the VM and establish a QMP connection'''
         devnull = open(os.path.devnull, 'rb')
         self._pre_launch()
+        if self._automatic_devices:
+            self._auto_args.extend(self._get_auto_console())
         self._qemu_full_args = (self._wrapper + [self._binary] +
-                                self._base_args() + self._args)
+                                self._base_args() + self._auto_args + self._args)
+        LOG.debug(self._qemu_full_args)
         self._popen = subprocess.Popen(self._qemu_full_args,
                                        stdin=devnull,
                                        stdout=self._qemu_log_file,

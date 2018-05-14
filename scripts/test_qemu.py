@@ -3,10 +3,10 @@ import os
 import glob
 import unittest
 
-from qemu import qemu_bin_arch
+from qemu import qemu_bin_arch, QEMUMachine
 
 
-def get_built_qemu_binaries(src_root=None):
+def get_built_qemu_binaries(src_root='/home/cleber/disposable/src/qemu'):
     if src_root is None:
         src_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     binaries = glob.glob(os.path.join(src_root, '*-softmmu/qemu-system-*'))
@@ -33,6 +33,23 @@ class QEMU(unittest.TestCase):
             self.assertEqual(qemu_bin_arch(binary),
                              binary.split('-')[-1].split(".exe")[0])
 
+    # @unittest.skipUnless('/home/cleber/disposable/src/qemu/s390x-softmmu/qemu-system-s390x'
+    #                      in get_built_qemu_binaries(), 'no s390x')
+    @unittest.skipUnless(get_built_qemu_binaries(),
+                         "Could not find any QEMU binaries built to use on "
+                         "arch check")
+    def test_auto_console(self):
+        import logging
+        logging.basicConfig(level=logging.DEBUG)
+        # FIXME: targets that don't accept a serial console or have some other issues
+        #exception_list = ['qemu-system-xtensaeb', 'qemu-system-ppc64', 'qemu-system-aarch64', ]
+        for binary in get_built_qemu_binaries():
+            #if os.path.basename(binary) in exception_list:
+            #    continue
+            qemu_machine = QEMUMachine(binary, automatic_devices=True)
+            qemu_machine.launch()
+            #self.assertIsNotNone(qemu_machine._console_address)
+            qemu_machine.shutdown()
 
 if __name__ == '__main__':
     unittest.main()
