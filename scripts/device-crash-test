@@ -333,7 +333,7 @@ class QemuBinaryInfo(object):
             self.alldevs = set(qomListTypeNames(vm, implements=devtype, abstract=False))
             # there's no way to query DeviceClass::user_creatable using QMP,
             # so use 'info qdm':
-            self.no_user_devs = set([d['name'] for d in infoQDM(vm, ) if d['no-user']])
+            self.no_user_devs = set([d['name'] for d in infoQDM(vm) if d['no-user']])
             self.machines = list(m['name'] for m in vm.command('query-machines'))
             self.user_devs = self.alldevs.difference(self.no_user_devs)
             self.kvm_available = vm.command('query-kvm')['enabled']
