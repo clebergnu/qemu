@@ -19,6 +19,7 @@ import subprocess
 import qmp.qmp
 import shutil
 import tempfile
+import socket
 
 
 LOG = logging.getLogger(__name__)
@@ -193,7 +194,15 @@ class QEMUMachine(object):
                                                 server=True)
 
     def _post_launch(self):
-        self._qmp.accept()
+        for attempt in range(15):
+            if self._popen.poll():
+                raise QEMUMachineError("QEMU process terminated before the "
+                                       "QMP connection could be established")
+            try:
+                self._qmp.accept(timeout=1)
+            except socket.error:
+                continue
+            break
 
     def _post_shutdown(self):
         if self._qemu_log_file is not None:
