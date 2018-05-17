@@ -17,12 +17,25 @@ import logging
 import os
 import subprocess
 import qmp.qmp
+import re
 import shutil
 import tempfile
 import socket
 
 
 LOG = logging.getLogger(__name__)
+
+
+#: Maps architectures and machine types to the preferred console
+#: device types
+CONSOLE_DEV_TYPES = {
+    'alpha': [(r'^clipper$', 'isa-serial')],
+    'mips': [(r'^malta', 'isa-serial')],
+    'x86_64': [(r'^(pc.*|q35.*|isapc)$', 'isa-serial')],
+    'ppc64': [(r'^(40p|powernv|prep)$', 'isa-serial'),
+              (r'^pseries.*', 'spapr-vty')],
+    's390x': [(r'^s390-ccw-virtio.*', 'sclpconsole')]
+    }
 
 
 class QEMUMachineError(Exception):
@@ -33,6 +46,15 @@ class QEMUMachineError(Exception):
 class QEMUMachineProbeError(QEMUMachineError):
     """
     Exception raised when a probe a fails to be deterministic
+    """
+
+class QEMUMachineAddDeviceError(QEMUMachineError):
+    """
+    Exception raised when a request to add a device can not be fulfilled
+
+    The failures are caused by limitations, lack of information or conflicting
+    requests on the QEMUMachine methods.  This exception does not represent
+    failures reported by the QEMU binary itself.
     """
 
 class MonitorResponseError(qmp.qmp.QMPError):
@@ -162,6 +184,9 @@ class QEMUMachine(object):
         self._temp_dir = None
         self._launched = False
         self._arch = arch
+        self._machine = None
+        self._console_device_type = None
+        self._console_address = None
 
         # just in case logging wasn't configured by the main script:
         logging.basicConfig()
@@ -246,9 +271,18 @@ class QEMUMachine(object):
                 self._monitor_address[1])
         else:
             moncdev = 'socket,id=mon,path=%s' % self._vm_monitor
-        return ['-chardev', moncdev,
+        args = ['-chardev', moncdev,
                 '-mon', 'chardev=mon,mode=control',
                 '-display', 'none', '-vga', 'none']
+        if self._machine is not None:
+            args.extend(['-machine', self._machine])
+        if self._console_device_type is not None:
+            self._console_address = os.path.join(self._temp_dir,
+                                                 self._name + "-console.sock")
+            chardev = 'socket,id=console,path=%s,server,nowait' % self._console_address
+            device = '%s,chardev=console' % self._console_device_type
+            args.extend(['-chardev', chardev, '-device', device])
+        return args
 
     def _pre_launch(self):
         self._temp_dir = tempfile.mkdtemp(dir=self._test_dir)
@@ -262,6 +296,7 @@ class QEMUMachine(object):
 
         self._qmp = qmp.qmp.QEMUMonitorProtocol(self._vm_monitor,
                                                 server=True)
+
 
     def _post_launch(self):
         for attempt in range(15):
@@ -447,3 +482,58 @@ class QEMUMachine(object):
         '''
         self._arch = qemu_bin_probe_arch(self._binary)
         return self._arch
+
+    def set_machine(self, machine_type):
+        '''
+        Sets the machine type
+
+        If set, the machine type will be added to the base arguments
+        of the resulting QEMU command line.
+        '''
+        self._machine = machine_type
+
+    def set_console(self, device_type=None):
+        '''
+        Sets the device type for a console device
+
+        If set, the console device and a backing character device will
+        be added to the base arguments of the resulting QEMU command
+        line.
+
+        This is a convenience method that will either use the provided
+        device type, of if not given, it will used the device type set
+        on CONSOLE_DEV_TYPES.
+
+        The actual setting of command line arguments will be be done at
+        machine launch time, as it depends on the temporary directory
+        to be created.
+
+        @param device_type: the device type, such as "isa-serial"
+        @raises: QEMUMachineAddDeviceError if the device type is not given
+                 and can not be determined.
+        '''
+        if device_type is None:
+            if self._machine is None:
+                raise QEMUMachineAddDeviceError("Can not add a console device:"
+                                                " QEMU instance without a "
+                                                "defined machine type")
+            checks = CONSOLE_DEV_TYPES.get(self._arch, None)
+            if checks is None:
+                raise QEMUMachineAddDeviceError("Can not add a console device:"
+                                                " no machine and console type "
+                                                "definition for arch "
+                                                "\"%s\"" % self._arch)
+            for regex, device in checks:
+                if re.match(regex, self._machine):
+                    device_type = device
+                    break
+            if device_type is None:
+                raise QEMUMachineAddDeviceError("Can not add a console device:"
+                                                " no matching console device "
+                                                "type definition")
+
+        self._console_device_type = device_type
+
+    @property
+    def console_address(self):
+        return self._console_address
