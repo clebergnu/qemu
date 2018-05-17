@@ -69,16 +69,6 @@ class QEMUMonitorProtocol(object):
             family = socket.AF_UNIX
         return socket.socket(family, socket.SOCK_STREAM)
 
-    def __negotiate_capabilities(self):
-        greeting = self.__json_read()
-        if greeting is None or "QMP" not in greeting:
-            raise QMPConnectError
-        # Greeting seems ok, negotiate capabilities
-        resp = self.cmd('qmp_capabilities')
-        if resp is not None and "return" in resp:
-            return greeting
-        raise QMPCapabilitiesError
-
     def __json_read(self, only_event=False):
         while True:
             data = self.__sockfile.readline()
@@ -133,6 +123,18 @@ class QEMUMonitorProtocol(object):
                 raise QMPConnectError("Error while reading from socket")
             self.__sock.settimeout(None)
 
+    def receive_greeting(self):
+        greeting = self.__json_read()
+        if greeting is None or "QMP" not in greeting:
+            raise QMPConnectError
+        return greeting
+
+    def negotiate_capabilities(self):
+        resp = self.cmd('qmp_capabilities')
+        if resp is not None and "return" in resp:
+            return resp
+        raise QMPCapabilitiesError
+
     def connect(self, negotiate=True):
         """
         Connect to the QMP Monitor and perform capabilities negotiation.
@@ -144,10 +146,12 @@ class QEMUMonitorProtocol(object):
         """
         self.__sock.connect(self.__address)
         self.__sockfile = self.__sock.makefile()
-        if negotiate:
-            return self.__negotiate_capabilities()
+        greeting = self.receive_greeting()
+        if not negotiate:
+            return greeting
+        return self.negotiate_capabilities()
 
-    def accept(self):
+    def accept(self, negotiate=True):
         """
         Await connection from QMP Monitor and perform capabilities negotiation.
 
@@ -159,7 +163,10 @@ class QEMUMonitorProtocol(object):
         self.__sock.settimeout(15)
         self.__sock, _ = self.__sock.accept()
         self.__sockfile = self.__sock.makefile()
-        return self.__negotiate_capabilities()
+        greeting = self.receive_greeting()
+        if not negotiate:
+            return greeting
+        return self.negotiate_capabilities()
 
     def cmd_obj(self, qmp_cmd):
         """
