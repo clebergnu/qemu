@@ -30,6 +30,10 @@ class QEMUMachineError(Exception):
     Exception called when an error in QEMUMachine happens.
     """
 
+class QEMUMachineProbeError(QEMUMachineError):
+    """
+    Exception raised when a probe a fails to be deterministic
+    """
 
 class MonitorResponseError(qmp.qmp.QMPError):
     '''
@@ -44,6 +48,68 @@ class MonitorResponseError(qmp.qmp.QMPError):
         self.reply = reply
 
 
+def dev_null():
+    """
+    A best effort null device
+    """
+    if hasattr(subprocess, 'DEVNULL'):
+        return subprocess.DEVNULL
+    else:
+        if os.path.exists('/dev/null'):
+            return open('/dev/null', 'w')
+
+
+def qmp_execute(binary_path, qmp_command):
+    """
+    Executes a QMP command on a given QEMU binary
+
+    Useful for one-off execution of QEMU binaries to get runtime
+    information.
+
+    @param binary_path: path to a QEMU binary
+    @param qmp_command: the QMP command
+    @note: passing arguments to the QMP command is not supported at
+           this time.
+    """
+    try:
+        tempdir = tempfile.mkdtemp()
+        monitor_socket = os.path.join(tempdir, 'monitor.sock')
+        args = [binary_path, '-nodefaults', '-machine', 'none',
+                '-nographic', '-S', '-qmp', 'unix:%s' % monitor_socket]
+        monitor = qmp.qmp.QEMUMonitorProtocol(monitor_socket, True)
+        try:
+            qemu_proc = subprocess.Popen(args,
+                                         stdin=subprocess.PIPE,
+                                         stdout=subprocess.PIPE,
+                                         stderr=dev_null(),
+                                         universal_newlines=True)
+        except OSError:
+            return None
+        monitor.accept()
+        res = monitor.cmd(qmp_command)
+        monitor.cmd("quit")
+        qemu_proc.wait()
+        monitor.close()
+        return res.get("return", None)
+    finally:
+        shutil.rmtree(tempdir)
+
+
+def qemu_bin_probe_arch(binary_path):
+    """
+    Probes the architecture from the QEMU binary
+
+    @returns: either the probed arch or None
+    @rtype: str or None
+    @raises: QEMUMachineProbeError
+    """
+    res = qmp_execute(binary_path, "query-target")
+    if res is None:
+        raise QEMUMachineProbeError('Failed to probe the QEMU arch by querying the '
+                                    'target of binary "%s"' % binary_path)
+    return res.get("arch", None)
+
+
 class QEMUMachine(object):
     '''A QEMU VM
 
@@ -56,7 +122,7 @@ class QEMUMachine(object):
 
     def __init__(self, binary, args=None, wrapper=None, name=None,
                  test_dir="/var/tmp", monitor_address=None,
-                 socket_scm_helper=None):
+                 socket_scm_helper=None, arch=None):
         '''
         Initialize a QEMUMachine
 
@@ -67,6 +133,9 @@ class QEMUMachine(object):
         @param test_dir: where to create socket and log file
         @param monitor_address: address for QMP monitor
         @param socket_scm_helper: helper program, required for send_fd_scm()"
+        @param arch: the intended architecture, which can influence the
+                     behavior of methods that add architecture specific
+                     options.
         @note: Qemu process is not started until launch() is used.
         '''
         if args is None:
@@ -92,6 +161,7 @@ class QEMUMachine(object):
         self._test_dir = test_dir
         self._temp_dir = None
         self._launched = False
+        self._arch = arch
 
         # just in case logging wasn't configured by the main script:
         logging.basicConfig()
@@ -368,3 +438,12 @@ class QEMUMachine(object):
         of the qemu process.
         '''
         return self._iolog
+
+    def probe_arch(self):
+        '''
+        Probes the architecture of the QEMU binary
+
+        @returns: the probed architecture
+        '''
+        self._arch = qemu_bin_probe_arch(self._binary)
+        return self._arch
