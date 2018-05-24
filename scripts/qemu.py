@@ -359,3 +359,17 @@ class QEMUMachine(object):
         of the qemu process.
         '''
         return self._iolog
+
+    @property
+    def args(self):
+        '''
+        Allows access to the list of extra arguments
+        '''
+        return self._args
+
+    @args.setter
+    def args(self, value):
+        '''
+        Allows setting the list of extra arguments
+        '''
+        self._args = value
