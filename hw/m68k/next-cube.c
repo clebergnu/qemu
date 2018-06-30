@@ -578,6 +578,108 @@ static const MemoryRegionOps scr_ops = {
     .endianness = DEVICE_NATIVE_ENDIAN,
 };
 
+static void nextdma_write(void *opaque, uint8_t *buf, int size, int type)
+{
+    uint32_t base_addr;
+    int irq = 0;
+    uint8_t align = 16;
+    NeXTState *next_state = NEXT_MACHINE(qdev_get_machine());
+
+    if (type == NEXTDMA_ENRX || type == NEXTDMA_ENTX) {
+        align = 32;
+    }
+    /* Most DMA is supposedly 16 byte aligned */
+    if ((size % align) != 0) {
+        size -= size % align;
+        size += align;
+    }
+
+    /*
+     * prom sets the dma start using initbuf while the bootloader uses next
+     * so we check to see if initbuf is 0
+     */
+    if (next_state->dma[type].next_initbuf == 0) {
+        base_addr = next_state->dma[type].next;
+    } else {
+        base_addr = next_state->dma[type].next_initbuf;
+    }
+
+    cpu_physical_memory_write(base_addr, buf, size);
+
+    next_state->dma[type].next_initbuf = 0;
+
+    /* saved limit is checked to calculate packet size
+        by both the rom and netbsd */
+    next_state->dma[type].saved_limit = (next_state->dma[type].next + size);
+    next_state->dma[type].saved_next  = (next_state->dma[type].next);
+
+    /*32 bytes under savedbase seems to be some kind of register
+    of which the purpose is unknown as of yet*/
+    //stl_phys(s->rx_dma.base-32,0xFFFFFFFF);
+
+    if (!(next_state->dma[type].csr & DMA_SUPDATE)) {
+        next_state->dma[type].next  = next_state->dma[type].start;
+        next_state->dma[type].limit = next_state->dma[type].stop;
+    }
+
+    /* Set dma registers and raise an irq */
+    next_state->dma[type].csr |= DMA_COMPLETE; /* DON'T CHANGE THIS! */
+
+    switch (type) {
+    case NEXTDMA_SCSI:
+        irq = NEXT_SCSI_DMA_I;
+        break;
+    }
+
+    next_irq(opaque, irq, 1);
+    next_irq(opaque, irq, 0);
+}
+
+static void nextscsi_read(void *opaque, uint8_t *buf, int len)
+{
+    DPRINTF("SCSI READ: %x\n", len);
+    abort();
+}
+
+static void nextscsi_write(void *opaque, uint8_t *buf, int size)
+{
+    DPRINTF("SCSI WRITE: %i\n", size);
+    nextdma_write(opaque, buf, size, NEXTDMA_SCSI);
+}
+
+static void nextscsi_irq(void *opaque, int n, int level)
+{
+    DPRINTF("SCSI IRQ NUM %p %i %i %x\n", opaque, n, level, int_mask);
+    next_irq(opaque, NEXT_SCSI_I, level);
+}
+
+static void next_scsi_init(NeXTState *next_state, M68kCPU *cpu)
+{
+    DeviceState *dev;
+    SysBusDevice *sysbusdev;
+    SysBusESPState *sysbus_esp;
+    ESPState *esp;
+
+    next_state->scsi_irq = qemu_allocate_irqs(nextscsi_irq, cpu, 1);
+
+    dev = qdev_create(NULL, TYPE_ESP);
+    sysbus_esp = ESP_STATE(dev);
+    esp = &sysbus_esp->esp;
+    esp->dma_memory_read = nextscsi_read;
+    esp->dma_memory_write = nextscsi_write;
+    esp->dma_opaque = cpu;
+    sysbus_esp->it_shift = 0;
+    esp->dma_enabled = 1;
+    qdev_init_nofail(dev);
+
+    sysbusdev = SYS_BUS_DEVICE(dev);
+    sysbus_connect_irq(sysbusdev, 0, next_state->scsi_irq[0]);
+    sysbus_mmio_map(sysbusdev, 0, 0x2114000);
+
+    next_state->scsi_reset = qdev_get_gpio_in(dev, 0);
+    next_state->scsi_dma = qdev_get_gpio_in(dev, 1);
+}
+
 #define NEXTDMA_SCSI(x)      (0x10 + x)
 #define NEXTDMA_FD(x)        (0x10 + x)
 #define NEXTDMA_ENTX(x)      (0x110 + x)
@@ -952,7 +1054,9 @@ static void next_cube_init(MachineState *machine)
     /* TODO: */
     /* Serial */
     /* Network */
+
     /* SCSI */
+    next_scsi_init(ns, cpu);
 
     /* DMA */
     memory_region_init_io(dmamem, NULL, &dma_ops, machine, "next.dma", 0x5000);
