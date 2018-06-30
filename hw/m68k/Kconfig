@@ -12,4 +12,4 @@ config NEXTCUBE
     bool
     select FRAMEBUFFER
     select ESP
-
+    select ESCC
