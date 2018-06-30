@@ -24,7 +24,6 @@
 #include "hw/block/fdc.h"
 #include "qapi/error.h"
 #include "ui/console.h"
-#include "target/m68k/cpu.h"
 
 /* #define DEBUG_NEXT */
 #ifdef DEBUG_NEXT
@@ -1086,8 +1085,8 @@ static void next_cube_init(MachineState *machine)
     /* Serial */
     next_escc_init(cpu);
 
-    /* TODO: */
     /* Network */
+    nextnet_init(cpu);
 
     /* SCSI */
     next_scsi_init(ns, cpu);

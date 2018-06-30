@@ -2,6 +2,8 @@
 #ifndef NEXT_CUBE_H
 #define NEXT_CUBE_H
 
+#include "target/m68k/cpu.h"
+
 enum next_dma_chan {
     NEXTDMA_FD,
     NEXTDMA_ENRX,
@@ -45,5 +47,8 @@ void nextfb_init(void);
 
 /* next-kbd.c  */
 void nextkbd_init(void);
+
+/* next-net.c */
+void nextnet_init(M68kCPU *cpu);
 
 #endif /* NEXT_CUBE_H */

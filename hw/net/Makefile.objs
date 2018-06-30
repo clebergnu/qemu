@@ -33,6 +33,7 @@ common-obj-$(CONFIG_SUNGEM) += sungem.o
 
 obj-$(CONFIG_ETRAXFS) += etraxfs_eth.o
 obj-$(CONFIG_COLDFIRE) += mcf_fec.o
+obj-$(CONFIG_NEXTCUBE) += next-net.o
 obj-$(CONFIG_MILKYMIST) += milkymist-minimac2.o
 obj-$(CONFIG_PSERIES) += spapr_llan.o
 obj-$(CONFIG_XILINX_ETHLITE) += xilinx_ethlite.o
