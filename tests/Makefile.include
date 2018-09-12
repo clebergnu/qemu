@@ -12,6 +12,7 @@ check-help:
 	@echo " $(MAKE) check-block          Run block tests"
 	@echo " $(MAKE) check-tcg            Run TCG tests"
 	@echo " $(MAKE) check-report.html    Generates an HTML test report"
+	@echo " $(MAKE) check-acceptance     Run all acceptance (functional) tests"
 	@echo " $(MAKE) check-clean          Clean the tests"
 	@echo
 	@echo "Please note that HTML reports do not regenerate if the unit tests"
@@ -999,6 +1000,37 @@ check-decodetree:
           ./check.sh "$(PYTHON)" "$(SRC_PATH)/scripts/decodetree.py", \
           TEST, decodetree.py)
 
+# Acceptance (AKA functional, AKA Avocado) tests
+
+.PHONY: acceptance-venv check-acceptance
+
+ACCEPTANCE_VENV_DIR=$(BUILD_DIR)/.acceptance_venv
+ACCEPTANCE_RESULTS_DIR=$(ACCEPTANCE_VENV_DIR)/results
+PYTHON_VERSION=$(shell $(PYTHON) -c "import sysconfig; print(sysconfig.get_python_version())")
+AVOCADO_VERSION=63.0
+AVOCADO_INSTALL_DIST_INFO=$(ACCEPTANCE_VENV_DIR)/lib/python$(PYTHON_VERSION)/site-packages/avocado_framework-$(AVOCADO_VERSION).dist-info
+
+$(ACCEPTANCE_VENV_DIR):
+	$(call quiet-command, \
+            $(PYTHON) -m venv $@, \
+            "VENV", $@)
+
+$(AVOCADO_INSTALL_DIST_INFO): $(ACCEPTANCE_VENV_DIR)
+	$(call quiet-command, \
+            $(ACCEPTANCE_VENV_DIR)/bin/pip install -q avocado-framework==$(AVOCADO_VERSION))
+
+$(ACCEPTANCE_RESULTS_DIR):
+	$(call quiet-command, mkdir -p $@)
+
+acceptance-venv: $(AVOCADO_INSTALL_DIST_INFO) $(ACCEPTANCE_RESULTS_DIR)
+
+check-acceptance: acceptance-venv
+	$(call quiet-command, \
+            $(BUILD_DIR)/.acceptance_venv/bin/avocado \
+            --show=none run --job-results-dir=$(ACCEPTANCE_RESULTS_DIR) \
+            $(SRC_PATH)/tests/acceptance, \
+            "AVOCADO", "tests/acceptance")
+
 # Consolidated targets
 
 .PHONY: check-qapi-schema check-qtest check-unit check check-clean
@@ -1012,6 +1044,7 @@ check-clean:
 	rm -rf $(check-unit-y) tests/*.o $(QEMU_IOTESTS_HELPERS-y)
 	rm -rf $(sort $(foreach target,$(SYSEMU_TARGET_LIST), $(check-qtest-$(target)-y)) $(check-qtest-generic-y))
 	rm -f tests/test-qapi-gen-timestamp
+	rm -rf $(BUILD_DIR)/.acceptance_venv
 
 clean: check-clean
 
