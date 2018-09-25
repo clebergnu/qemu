@@ -13,6 +13,8 @@ import sys
 
 import avocado
 
+from avocado.utils import vmimage
+
 SRC_ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 SRC_ROOT_DIR = os.path.abspath(os.path.dirname(SRC_ROOT_DIR))
 sys.path.append(os.path.join(SRC_ROOT_DIR, 'scripts'))
@@ -77,6 +79,14 @@ class Test(avocado.Test):
         self.vm.add_args('-m', self.vm_hw['memory'])
 
         self.vm_hw['arch'] = self.params.get('arch', default=os.uname()[4])
+
+    def set_vm_image(self):
+        distro = self.params.get('distro', default='fedora')
+        version = self.params.get('version', default='28')
+        boot = vmimage.get(distro, arch=self.vm_hw['arch'], version=version,
+                           cache_dir=self.cache_dirs[0],
+                           snapshot_dir=self.workdir)
+        self.vm.add_args('-drive', 'file=%s' % boot.path)
 
     def tearDown(self):
         if self.vm is not None:
