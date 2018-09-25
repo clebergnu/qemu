@@ -107,6 +107,11 @@ class Test(avocado.Test):
                       authorized_key=self.vm_hw['pub_key'])
         self.vm.add_args('-drive', 'file=%s' % cloudinit_iso)
 
+    def wait_for_vm_boot(self):
+        return cloudinit.wait_for_phone_home(
+            ('0.0.0.0', self.vm_hw['phone_home_port']),
+            self.name)
+
     def tearDown(self):
         if self.vm is not None:
             self.vm.shutdown()
