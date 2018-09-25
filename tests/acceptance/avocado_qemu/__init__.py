@@ -13,7 +13,10 @@ import sys
 
 import avocado
 
+from avocado.utils import cloudinit
 from avocado.utils import vmimage
+from avocado.utils import network
+from avocado.utils import genio
 
 SRC_ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 SRC_ROOT_DIR = os.path.abspath(os.path.dirname(SRC_ROOT_DIR))
@@ -87,6 +90,22 @@ class Test(avocado.Test):
                            cache_dir=self.cache_dirs[0],
                            snapshot_dir=self.workdir)
         self.vm.add_args('-drive', 'file=%s' % boot.path)
+
+    def set_vm_cloudinit(self):
+        # not really hardware configuration things...
+        self.vm_hw['phone_home_port'] = network.find_free_port()
+        self.vm_hw['key_path'] = os.path.join(os.path.dirname(
+            os.path.dirname(os.path.dirname(__file__))), 'keys')
+        self.vm_hw['pub_key'] = genio.read_file(os.path.join(self.vm_hw['key_path'],
+                                                             'id_rsa.pub'))
+        cloudinit_iso = os.path.join(self.workdir, 'cloudinit.iso')
+        cloudinit.iso(cloudinit_iso, self.name,
+                      username='root', password='root',
+                      # QEMU's hard coded usermode router address
+                      phone_home_host='10.0.2.2',
+                      phone_home_port=self.vm_hw['phone_home_port'],
+                      authorized_key=self.vm_hw['pub_key'])
+        self.vm.add_args('-drive', 'file=%s' % cloudinit_iso)
 
     def tearDown(self):
         if self.vm is not None:
