@@ -59,6 +59,24 @@ class Test(avocado.Test):
         if self.qemu_bin is None:
             self.cancel("No QEMU binary defined or found in the source tree")
         self.vm = QEMUMachine(self.qemu_bin)
+        self._set_vm_hardware()
+
+    def _set_vm_hardware(self):
+        self.vm_hw = {}
+
+        self.vm_hw['machine'] = self.params.get('machine', default='pc')
+        self.vm.set_machine(self.vm_hw['machine'])
+
+        self.vm_hw['accel'] = self.params.get('accel', default='kvm')
+        self.vm.add_args('-accel', self.vm_hw['accel'])
+
+        self.vm_hw['smp'] = self.params.get('smp', default='8')
+        self.vm.add_args('-smp', self.vm_hw['smp'])
+
+        self.vm_hw['memory'] = self.params.get('memory', default='4096')
+        self.vm.add_args('-m', self.vm_hw['memory'])
+
+        self.vm_hw['arch'] = self.params.get('arch', default=os.uname()[4])
 
     def tearDown(self):
         if self.vm is not None:
