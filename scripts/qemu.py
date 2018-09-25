@@ -524,3 +524,10 @@ class QEMUMachine(object):
                                                  socket.SOCK_STREAM)
             self._console_socket.connect(self._console_address)
         return self._console_socket
+
+    def add_session_network(self, port, device_type='e1000'):
+        """
+        Adds a network device that will be for interacting with the guest via SSH
+        """
+        self.add_args('-netdev', 'user,id=user,hostfwd=tcp:127.0.0.1:%d-:22' % port)
+        self.add_args('-device', '%s,netdev=user' % device_type)
