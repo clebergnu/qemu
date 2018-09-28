@@ -14,7 +14,7 @@ import re
 from avocado_qemu import Test
 
 from avocado.utils import network
-from avocado.utils import remote
+from avocado.utils import ssh
 
 
 class LinuxHWCheck(Test):
@@ -26,7 +26,7 @@ class LinuxHWCheck(Test):
 
     timeout = 600
 
-    def test_boot(self):
+    def xxx_test_boot(self):
         self.set_vm_image()
         self.set_vm_cloudinit()
         self.vm.launch()
@@ -40,9 +40,9 @@ class LinuxHWCheck(Test):
         self.vm.launch()
         self.wait_for_vm_boot()
 
-        address = remote.IPAddress('127.0.0.1', ssh_port)
-        credentials = ('root', os.path.join(self.vm_hw['key_path'], 'id_rsa'))
-        with remote.SSHSession(address, credentials) as session:
+        priv_key = os.path.join(self.vm_hw['key_path'], 'id_rsa')
+        with ssh.Session(('127.0.0.1', ssh_port),
+                         ('root', priv_key)) as session:
             # cpu
             proc_count_cmd = 'egrep -c "^processor\s\:" /proc/cpuinfo'
             self.assertEqual(int(self.vm_hw['smp']),
