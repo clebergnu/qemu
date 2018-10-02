@@ -69,11 +69,13 @@ class Test(avocado.Test):
     def _set_vm_hardware(self):
         self.vm_hw = {}
 
-        self.vm_hw['machine'] = self.params.get('machine', default='pc')
-        self.vm.set_machine(self.vm_hw['machine'])
+        if self.arch == 'x86_64':
+            self.vm_hw['machine'] = self.params.get('machine', default='pc')
+            self.vm.set_machine(self.vm_hw['machine'])
 
         self.vm_hw['accel'] = self.params.get('accel', default='kvm')
-        self.vm.add_args('-accel', self.vm_hw['accel'])
+        if (self.arch == os.uname()[4]) and (self.arch == 'x86_64'):
+            self.vm.add_args('-accel', self.vm_hw['accel'])
 
         self.vm_hw['smp'] = self.params.get('smp', default='8')
         self.vm.add_args('-smp', self.vm_hw['smp'])
