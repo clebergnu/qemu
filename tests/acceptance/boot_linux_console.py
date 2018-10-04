@@ -23,12 +23,18 @@ class BootLinuxConsole(Test):
 
     timeout = 60
 
+    ARCH_DATA = {'x86_64': ('https://mirrors.kernel.org/fedora/releases/28/'
+                            'Everything/x86_64/os/images/pxeboot/vmlinuz',
+                            '238e083e114c48200f80d889f7e32eeb2793e02a'),
+                 'ppc64': ('https://dl.fedoraproject.org/pub/fedora-secondary/'
+                           'releases/28/Everything/ppc64/os/ppc/ppc64/vmlinuz',
+                           '44f1da4e23027ec8539ccb2f606dddba729041de')}
+
     def test(self):
-        if self.arch != 'x86_64':
-            self.cancel('Currently specific to the x86_64 target arch')
-        kernel_url = ('https://mirrors.kernel.org/fedora/releases/28/'
-                      'Everything/x86_64/os/images/pxeboot/vmlinuz')
-        kernel_hash = '238e083e114c48200f80d889f7e32eeb2793e02a'
+        if self.arch not in self.ARCH_DATA:
+            self.cancel('Targetarchitecture not currently supported')
+
+        kernel_url, kernel_hash = self.ARCH_DATA[self.arch]
         kernel_path = self.fetch_asset(kernel_url, asset_hash=kernel_hash)
 
         self.vm.set_arch(self.arch)

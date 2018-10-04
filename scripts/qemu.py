@@ -253,7 +253,7 @@ class QEMUMachine(object):
             chardev = ('socket,id=console,path=%s,server,nowait' %
                        self._console_address)
             device = '%s,chardev=console' % self._console_device_type
-            args.extend(['-chardev', chardev, '-device', device])
+            args.extend(['-chardev', chardev, '-serial', 'chardev:console'])
         return args
 
     def _pre_launch(self):
