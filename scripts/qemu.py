@@ -36,13 +36,46 @@ CONSOLE_DEV_TYPES = {
     r'^s390-ccw-virtio.*': 'sclpconsole',
     }
 
-#: Maps target architectures to a default machine type
-MACHINE_TYPES = {
+#: Maps target architectures to a "good" choice for a machine type
+#: This is useful on targets that do not offer a default (builtin)
+#: machine type
+GOOD_MACHINE_TYPES = {
     'arm': 'virt',
     'aarch64': 'virt',
     'tricore': 'tricore_testboard',
     }
 
+#: Maps target architectures to the default (builtin) machine type
+DEFAULT_MACHINE_TYPES = {
+    'alpha': 'clipper',
+    'cris': 'axis-dev88',
+    'hppa': 'hppa',
+    'i386': 'pc',
+    'lm32': 'lm32-evr',
+    'm68k': 'mcf5208evb',
+    'microblazeel': 'petalogix-s3adsp1800',
+    'microblaze': 'petalogix-s3adsp1800',
+    'mips64el': 'malta',
+    'mips64': 'malta',
+    'mipsel': 'malta',
+    'mips': 'malta',
+    'moxie': 'moxiesim',
+    'nios2': '10m50',
+    'or1k': 'or1k',
+    'ppc64': 'pseries',
+    'ppc': 'g3beige',
+    'riscv32': 'spike_v1.10',
+    'riscv64': 'spike_v1.10',
+    's390x': 's390-ccw-virtio',
+    'sh4eb': 'shix',
+    'sh4': 'shix',
+    'sparc64': 'sun4u',
+    'sparc': 'SS-5',
+    'unicore32': 'puv3',
+    'x86'_'64: pc',
+    'xtensaeb': 'sim',
+    'xtensa': 'sim',
+    }
 
 class QEMUMachineError(Exception):
     """
@@ -434,7 +467,7 @@ class QEMUMachine(object):
                              supposed to set on the QEMU command line.
                              None is a valid value and means that a
                              default one will be used.  The default
-                             comes from :data:`MACHINE_TYPES` if a
+                             comes from :data:`GOOD_MACHINE_TYPES` if a
                              matching target arch entry exists.  If
                              one doesn't exist, it will be omitted
                              from the QEMU command line and the target
@@ -442,7 +475,7 @@ class QEMUMachine(object):
         :type machine_type: str or None
         '''
         if machine_type is None and self._arch is not None:
-            machine_type = MACHINE_TYPES.get(self._arch, None)
+            machine_type = GOOD_MACHINE_TYPES.get(self._arch, None)
         self._machine = machine_type
 
     def set_console(self, device_type=None):
@@ -466,12 +499,13 @@ class QEMUMachine(object):
                  and can not be determined.
         '''
         if device_type is None:
-            if self._machine is None:
+            machine = self._machine or DEFAULT_MACHINE_TYPES.get(self._arch)
+            if machine is None:
                 raise QEMUMachineAddDeviceError("Can not add a console device:"
                                                 " QEMU instance without a "
                                                 "defined machine type")
             for regex, device in CONSOLE_DEV_TYPES.items():
-                if re.match(regex, self._machine):
+                if re.match(regex, machine):
                     device_type = device
                     break
             if device_type is None:
