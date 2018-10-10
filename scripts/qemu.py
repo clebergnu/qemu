@@ -36,13 +36,11 @@ CONSOLE_DEV_TYPES = {
     r'^s390-ccw-virtio.*': 'sclpconsole',
     }
 
-#: Maps archictures to the preferred machine type
+#: Maps target architectures to a default machine type
 MACHINE_TYPES = {
-    r'^aarch64$': 'virt',
-    r'^ppc$': 'g3beige',
-    r'^ppc64$': 'pseries',
-    r'^s390x$': 's390-ccw-virtio',
-    r'^x86_64$': 'q35',
+    'arm': 'virt',
+    'aarch64': 'virt',
+    'tricore': 'tricore_testboard',
     }
 
 
@@ -426,20 +424,25 @@ class QEMUMachine(object):
         '''
         Sets the machine type
 
-        If set, the machine type will be added to the base arguments
-        of the resulting QEMU command line.
+        If given an explicit machine type, it will be set in a private
+        instance attribute, and later added to the QEMU command line.
+        This allows ``set_machine()`` to be called safely on all
+        target archs and result in a valid QEMU command line and thus
+        a running QEMU process.
+
+        :param machine_type: the machine type this QEMUMachine is
+                             supposed to set on the QEMU command line.
+                             None is a valid value and means that a
+                             default one will be used.  The default
+                             comes from :data:`MACHINE_TYPES` if a
+                             matching target arch entry exists.  If
+                             one doesn't exist, it will be omitted
+                             from the QEMU command line and the target
+                             built-in default will be used.
+        :type machine_type: str or None
         '''
-        if machine_type is None:
-            if self._arch is None:
-                raise QEMUMachineError("Can not set a default machine type: "
-                                       "QEMU instance without a defined arch")
-            for regex, machine in MACHINE_TYPES.items():
-                if re.match(regex, self._arch):
-                    machine_type = machine
-                    break
-            if machine_type is None:
-                raise QEMUMachineError("Can not set a machine type: no "
-                                       "matching machine type definition")
+        if machine_type is None and self._arch is not None:
+            machine_type = MACHINE_TYPES.get(self._arch, None)
         self._machine = machine_type
 
     def set_console(self, device_type=None):
