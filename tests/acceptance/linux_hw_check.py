@@ -26,12 +26,6 @@ class LinuxHWCheck(Test):
 
     timeout = 600
 
-    def xxx_test_boot(self):
-        self.set_vm_image()
-        self.set_vm_cloudinit()
-        self.vm.launch()
-        self.wait_for_vm_boot()
-
     def test_hw_resources(self):
         self.set_vm_image()
         self.set_vm_cloudinit()
