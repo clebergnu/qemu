@@ -72,7 +72,7 @@ DEFAULT_MACHINE_TYPES = {
     'sparc64': 'sun4u',
     'sparc': 'SS-5',
     'unicore32': 'puv3',
-    'x86'_'64: pc',
+    'x86_64': 'pc',
     'xtensaeb': 'sim',
     'xtensa': 'sim',
     }
