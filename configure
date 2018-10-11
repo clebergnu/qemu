@@ -7510,7 +7510,7 @@ for rom in seabios vgabios ; do
 done
 
 # set up tests data directory
-for tests_subdir in acceptance data; do
+for tests_subdir in acceptance data keys; do
     if [ ! -e tests/$tests_subdir ]; then
         symlink "$source_path/tests/$tests_subdir" tests/$tests_subdir
     fi
