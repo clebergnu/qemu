@@ -25,8 +25,9 @@ class BootLinuxConsole(Test):
     timeout = 60
 
     def test_x86_64_pc(self):
-        if self.arch != 'x86_64':
-            self.cancel('Currently specific to the x86_64 arch')
+        """
+        :avocado: tags=arch:x86_64
+        """
         kernel_url = ('https://mirrors.kernel.org/fedora/releases/28/'
                       'Everything/x86_64/os/images/pxeboot/vmlinuz')
         kernel_hash = '238e083e114c48200f80d889f7e32eeb2793e02a'
@@ -62,9 +63,6 @@ class BootLinuxConsole(Test):
 
         :avocado: tags=arch:mips
         """
-        if self.arch != 'mips': # FIXME use 'arch' tag in parent class?
-            self.cancel('Currently specific to the %s target arch' % self.arch)
-
         deb_url = ('http://snapshot.debian.org/archive/debian/20130217T032700Z/'
                    'pool/main/l/linux-2.6/'
                    'linux-image-2.6.32-5-4kc-malta_2.6.32-48_mips.deb')

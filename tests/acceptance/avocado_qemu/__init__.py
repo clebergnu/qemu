@@ -52,8 +52,20 @@ def pick_default_qemu_bin(arch=None):
 
 class Test(avocado.Test):
     def setUp(self):
-        self.vm = None
-        self.arch = self.params.get('arch', default=os.uname()[4])
+        arches = [tag.split(':', 1)[1] for tag in self.tags if tag.startswith('arch:')]
+
+        # Do not set a default arch based on the host - see discussion on qemu-devel
+        self.arch = self.params.get('arch', None)
+
+        # If a arch parameter is *not* given, and one, and only one "arch:" tag is
+        # given, default to that
+        if self.arch is None and len(arches) == 1:
+            self.arch = arches[0]
+
+        # If arch is still not set, cancel the test
+        if self.arch not in arches:
+            self.cancel('Currently specific to the targets: %s' % ", ".join(arches))
+
         self.qemu_bin = self.params.get('qemu_bin',
                                         default=pick_default_qemu_bin(self.arch))
         if self.qemu_bin is None:
