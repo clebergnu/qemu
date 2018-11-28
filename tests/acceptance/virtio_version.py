@@ -98,6 +98,7 @@ class VirtioVersionCheck(Test):
     def check_all_variants(self, qemu_devtype, virtio_devid):
         """Check if a virtio device type and its variants behave as expected"""
         # Force modern mode:
+        self.progress_message = '%s: forced modern mode' % qemu_devtype
         dev_modern,_ = self.run_device(qemu_devtype,
                                        'disable-modern=off,disable-legacy=on')
         self.assert_devids(dev_modern, pci_modern_device_id(virtio_devid),
@@ -105,20 +106,24 @@ class VirtioVersionCheck(Test):
 
         # <prefix>-non-transitional device types should be 100% equivalent to
         # <prefix>,disable-modern=off,disable-legacy=on
+        self.progress_message = '%s: non-transitional mode' % qemu_devtype
         dev_1_0,nt_ifaces = self.run_device('%s-non-transitional' % (qemu_devtype))
         self.assertEqual(dev_modern, dev_1_0)
 
         # Force transitional mode:
+        self.progress_message = '%s: forced transitional mode' % qemu_devtype
         dev_trans,_ = self.run_device(qemu_devtype,
                                       'disable-modern=off,disable-legacy=off')
         self.assert_devids(dev_trans, PCI_LEGACY_DEVICE_IDS[virtio_devid])
 
         # Force legacy mode:
+        self.progress_message = '%s: forced legacy mode' % qemu_devtype
         dev_legacy,_ = self.run_device(qemu_devtype,
                                        'disable-modern=on,disable-legacy=off')
         self.assert_devids(dev_legacy, PCI_LEGACY_DEVICE_IDS[virtio_devid])
 
         # No options: default to transitional on PC machine-type:
+        self.progress_message = '%s: default (transitional on pc)' % qemu_devtype
         no_opts_pc,generic_ifaces = self.run_device(qemu_devtype)
         self.assertEqual(dev_trans, no_opts_pc)
 
