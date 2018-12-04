@@ -14,7 +14,7 @@ from avocado_qemu import Test
 class Vnc(Test):
     """
     :avocado: enable
-    :avocado: tags=vnc,quick
+    :avocado: tags=vnc,quick,arch:any
     """
     def test_no_vnc(self):
         self.vm.add_args('-nodefaults', '-S')

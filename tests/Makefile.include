@@ -914,6 +914,8 @@ TESTS_RESULTS_DIR=$(BUILD_DIR)/tests/results
 # Any number of command separated loggers are accepted.  For more
 # information please refer to "avocado --help".
 AVOCADO_SHOW=app
+AVOCADO_TAGS_BUILT_TARGETS=$(patsubst %-softmmu,-t arch:%, $(filter %-softmmu,$(TARGET_DIRS)))
+AVOCADO_TAGS=$(AVOCADO_TAGS_BUILT_TARGETS) -t arch:any
 
 PYTHON3 = $(shell $(PYTHON) -c 'import sys; print(1 if sys.version_info >= (3, 0) else 0)')
 ifeq ($(PYTHON3), 1)
@@ -940,6 +942,7 @@ check-acceptance: check-venv $(TESTS_RESULTS_DIR)
 	$(call quiet-command, \
             $(TESTS_VENV_DIR)/bin/python -m avocado \
             --show=$(AVOCADO_SHOW) run --job-results-dir=$(TESTS_RESULTS_DIR) \
+            $(AVOCADO_TAGS) \
             --failfast=on $(SRC_PATH)/tests/acceptance, \
             "AVOCADO", "tests/acceptance")
 
