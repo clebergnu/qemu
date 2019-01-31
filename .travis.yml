@@ -81,7 +81,7 @@ matrix:
     # Acceptance (Functional) tests
     - env:
         - CONFIG="--python=/usr/bin/python3 --target-list=x86_64-softmmu,aarch64-softmmu"
-        - TEST_CMD="make check-acceptance"
+        - TEST_CMD="make AVOCADO_SHOW=test,console check-acceptance"
       addons:
         apt:
           packages:
