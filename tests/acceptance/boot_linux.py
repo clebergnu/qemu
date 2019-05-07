@@ -29,8 +29,11 @@ class BootLinux(Test):
         try:
             self.log.info('Downloading and preparing boot image')
             self.boot = vmimage.get(
-                'fedora', arch='x86_64', version='29',
-                checksum='7109d23215a3911b260a3b9bf3a07aac3436253a',
+                'fedora', arch='x86_64', version='30',
+                # hash comes from:
+                # https://dl.fedoraproject.org/pub/fedora/linux/releases/30/Cloud/x86_64/images/Fedora-Cloud-30-1.2-x86_64-CHECKSUM
+                checksum='72b6ae7b4ed09a4dccd6e966e1b3ac69bd97da419de9760b410e837ba00b4e26',
+                algorithm='sha256',
                 cache_dir=self.cache_dirs[0],
                 snapshot_dir=self.workdir)
         except:
@@ -44,10 +47,15 @@ class BootLinux(Test):
         self.vm.set_machine('pc')
         self.vm.add_args('-m', '1024')
         self.vm.add_args('-drive', 'file=%s' % self.boot.path)
+        self.vm.add_args('-vnc', ':0')
+        #self.vm.add_args('-accel', 'kvm')
+        self.vm.add_args('-object', 'rng-random,id=rng,filename=/dev/urandom')
 
         cloudinit_iso = os.path.join(self.workdir, 'cloudinit.iso')
         phone_home_port = network.find_free_port()
         cloudinit.iso(cloudinit_iso, self.name,
+                      username='root',
+                      password='password',
                       # QEMU's hard coded usermode router address
                       phone_home_host='10.0.2.2',
                       phone_home_port=phone_home_port)
