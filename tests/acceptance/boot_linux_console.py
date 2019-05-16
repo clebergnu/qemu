@@ -156,6 +156,17 @@ class BootLinuxConsole(Test):
         console_pattern = 'Kernel command line: %s' % kernel_command_line
         self.wait_for_console_pattern(console_pattern)
 
+    def test_qmp_post_aarch64_virt(self):
+        """
+        :avocado: tags=arch:aarch64
+        :avocado: tags=machine:virt
+        :avocado: tags=bug:triage
+        """
+        self.test_aarch64_virt()
+        for _ in range(2):
+            self.vm.qmp('stop')
+            self.vm.qmp('cont')
+
     def test_arm_virt(self):
         """
         :avocado: tags=arch:arm
@@ -175,6 +186,17 @@ class BootLinuxConsole(Test):
         self.vm.launch()
         console_pattern = 'Kernel command line: %s' % kernel_command_line
         self.wait_for_console_pattern(console_pattern)
+
+    def test_qmp_post_arm_virt(self):
+        """
+        :avocado: tags=arch:arm
+        :avocado: tags=machine:virt
+        :avocado: tags=bug:triage
+        """
+        self.test_arm_virt()
+        for _ in range(2):
+            self.vm.qmp('stop')
+            self.vm.qmp('cont')
 
     def test_s390x_s390_ccw_virtio(self):
         """
