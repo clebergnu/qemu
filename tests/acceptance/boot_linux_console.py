@@ -190,6 +190,7 @@ class BootLinuxConsole(Test):
         self.vm.set_console()
         kernel_command_line = self.KERNEL_COMMON_COMMAND_LINE + 'console=sclp0'
         self.vm.add_args('-nodefaults',
+                         '-no-shutdown',
                          '-kernel', kernel_path,
                          '-append', kernel_command_line)
         self.vm.launch()
