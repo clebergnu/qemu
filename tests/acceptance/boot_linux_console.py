@@ -10,6 +10,7 @@
 
 import os
 import logging
+import socket
 
 from avocado_qemu import Test
 from avocado.utils import process
@@ -40,6 +41,7 @@ class BootLinuxConsole(Test):
             msg = console.readline()
             console_logger.debug(msg.strip())
             if success_message in msg:
+                self.vm.console_socket.shutdown(socket.SHUT_RD)
                 break
             if failure_message in msg:
                 fail = 'Failure message found in console: %s' % failure_message
