@@ -115,3 +115,17 @@ class BootLinuxPPC64(BootLinux):
         self.vm.set_machine('pseries')
         self.vm.launch()
         self.wait_for_boot_confirmation()
+
+
+class BootLinuxS390X(BootLinux):
+
+    chksum = 'db2050699aad98e794c8377c1d613fc3f4f9f887f6afae8190567a37f23fb8b0'
+
+    def test_s390_ccw_virtio(self):
+        """
+        :avocado: tags=arch:s390x
+        :avocado: tags=machine:s390_ccw_virtio
+        """
+        self.vm.set_machine('s390-ccw-virtio')
+        self.vm.launch()
+        self.wait_for_boot_confirmation()
