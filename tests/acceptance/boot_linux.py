@@ -101,3 +101,17 @@ class BootLinuxAarch64(BootLinux):
         self.vm.add_args('-object', 'rng-random,id=rng0,filename=/dev/urandom')
         self.vm.launch()
         self.wait_for_boot_confirmation()
+
+
+class BootLinuxPPC64(BootLinux):
+
+    chksum = 'e2131c07e45ac20e56f9fb944c88eaf79e818d3dfb9fb3cbd7c0839eba49dcd1'
+
+    def test_pseries(self):
+        """
+        :avocado: tags=arch:ppc64
+        :avocado: tags=machine:pseries
+        """
+        self.vm.set_machine('pseries')
+        self.vm.launch()
+        self.wait_for_boot_confirmation()
