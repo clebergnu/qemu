@@ -22,7 +22,8 @@ class BootLinux(Test):
     Boots a Linux system, checking for a successful initialization
     """
 
-    timeout = 600
+    timeout = 20
+    setup_timeout = 90
     chksum = None
 
     def setUp(self):
@@ -31,6 +32,7 @@ class BootLinux(Test):
         self.vm.add_args('-m', '1024')
         self.vm.add_args('-drive', 'file=%s' % self.boot.path)
         self.prepare_cloudinit()
+        import time; time.sleep(30)
 
     def prepare_boot(self):
         try:
@@ -70,6 +72,7 @@ class BootLinuxX8664(BootLinux):
         :avocado: tags=machine:pc
         """
         self.vm.set_machine('pc')
+        self.vm.add_args('-accel', 'kvm')
         self.vm.launch()
         self.wait_for_boot_confirmation()
 
@@ -79,5 +82,6 @@ class BootLinuxX8664(BootLinux):
         :avocado: tags=machine:q35
         """
         self.vm.set_machine('q35')
+        self.vm.add_args('-accel', 'kvm')
         self.vm.launch()
         self.wait_for_boot_confirmation()
