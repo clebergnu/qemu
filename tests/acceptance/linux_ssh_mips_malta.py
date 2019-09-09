@@ -36,6 +36,7 @@ class LinuxSSH(Test):
         }
 
 
+    @skipIf(os.getenv('CONTINUOUS_INTEGRATION'), 'Running on Travis-CI')
     @skipUnless(ssh.SSH_CLIENT_BINARY, 'No SSH client available')
     def setUp(self):
         super(LinuxSSH, self).setUp()
@@ -145,7 +146,6 @@ class LinuxSSH(Test):
         self.run_common_commands()
         self.shutdown_via_ssh()
 
-    @skipIf(os.getenv('CONTINUOUS_INTEGRATION'), 'Running on Travis-CI')
     def test_mips_malta32eb_kernel3_2_0(self):
         """
         :avocado: tags=arch:mips
@@ -160,7 +160,6 @@ class LinuxSSH(Test):
 
         self.check_mips_malta('be', kernel_path, 'mips')
 
-    @skipIf(os.getenv('CONTINUOUS_INTEGRATION'), 'Running on Travis-CI')
     def test_mips_malta32el_kernel3_2_0(self):
         """
         :avocado: tags=arch:mipsel
@@ -175,7 +174,6 @@ class LinuxSSH(Test):
 
         self.check_mips_malta('le', kernel_path, 'mips')
 
-    @skipIf(os.getenv('CONTINUOUS_INTEGRATION'), 'Running on Travis-CI')
     def test_mips_malta64eb_kernel3_2_0(self):
         """
         :avocado: tags=arch:mips64
@@ -189,7 +187,7 @@ class LinuxSSH(Test):
         kernel_path = self.fetch_asset(kernel_url, asset_hash=kernel_hash)
         self.check_mips_malta('be', kernel_path, 'mips64')
 
-    @skipIf(os.getenv('CONTINUOUS_INTEGRATION'), 'Running on Travis-CI')
+
     def test_mips_malta64el_kernel3_2_0(self):
         """
         :avocado: tags=arch:mips64el
