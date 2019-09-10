@@ -271,10 +271,6 @@ class QEMUMachine(object):
 
         self._qemu_log_path = None
 
-        if self._console_socket is not None:
-            self._console_socket.close()
-            self._console_socket = None
-
         if self._temp_dir is not None:
             shutil.rmtree(self._temp_dir)
             self._temp_dir = None
@@ -334,6 +330,9 @@ class QEMUMachine(object):
         Terminate the VM and clean up
         """
         if self.is_running():
+            if self._console_socket is not None:
+                self._console_socket.close()
+                self._console_socket = None
             try:
                 if not has_quit:
                     self._qmp.cmd('quit')
