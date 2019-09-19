@@ -9,13 +9,18 @@ import os
 import re
 import base64
 import logging
-import paramiko
 import time
 
-from avocado import skipIf
+from avocado import skipIf, skipUnless
 from avocado_qemu import Test
 from avocado.utils import process
 from avocado.utils import archive
+
+PARAMIKO_AVAILABLE = True
+try:
+    import paramiko
+except ImportError:
+    PARAMIKO_AVAILABLE = False
 
 
 class LinuxSSH(Test):
@@ -145,32 +150,84 @@ class LinuxSSH(Test):
         self.ssh_disconnect_vm()
         self.wait_for_console_pattern('Power down')
 
+    def ssh_command_output_contains(self, cmd, exp):
+        stdout, _ = self.ssh_command(cmd)
+        for line in stdout:
+            if exp in line:
+                break
+        else:
+            self.fail('"%s" output does not contain "%s"' % (cmd, exp))
+
     def run_common_commands(self):
-        stdout, stderr = self.ssh_command('lspci -d 11ab:4620')
-        self.assertIn(True, ["GT-64120" in line for line in stdout])
-
-        stdout, stderr = self.ssh_command('cat /sys/bus/i2c/devices/i2c-0/name')
-        self.assertIn(True, ["SMBus PIIX4 adapter" in line
-                             for line in stdout])
-
-        stdout, stderr = self.ssh_command('cat /proc/mtd')
-        self.assertIn(True, ["YAMON" in line
-                             for line in stdout])
-
+        self.ssh_command_output_contains(
+            'cat /proc/cpuinfo',
+            '24Kc')
+        self.ssh_command_output_contains(
+            'uname -m',
+            'mips')
+        self.ssh_command_output_contains(
+            'uname -r',
+            '3.2.0-4-4kc-malta')
+        self.ssh_command_output_contains(
+            'cat /proc/interrupts',
+            'timer')
+        self.ssh_command_output_contains(
+            'cat /proc/interrupts',
+            'i8042')
+        self.ssh_command_output_contains(
+            'cat /proc/interrupts',
+            'serial')
+        self.ssh_command_output_contains(
+            'cat /proc/interrupts',
+            'ata_piix')
+        self.ssh_command_output_contains(
+            'cat /proc/interrupts',
+            'eth0')
+        self.ssh_command_output_contains(
+            'cat /proc/interrupts',
+            'eth0')
+        self.ssh_command_output_contains(
+            'cat /proc/devices',
+            'input')
+        self.ssh_command_output_contains(
+            'cat /proc/devices',
+            'usb')
+        self.ssh_command_output_contains(
+            'cat /proc/devices',
+            'fb')
+        self.ssh_command_output_contains(
+            'cat /proc/ioports',
+            'serial')
+        self.ssh_command_output_contains(
+            'cat /proc/ioports',
+            'ata_piix')
+        self.ssh_command_output_contains(
+            'cat /proc/ioports',
+            'piix4_smbus')
+        self.ssh_command_output_contains(
+            'lspci -d 11ab:4620',
+            'GT-64120')
+        self.ssh_command_output_contains(
+            'cat /sys/bus/i2c/devices/i2c-0/name',
+            'SMBus PIIX4 adapter')
+        self.ssh_command_output_contains(
+            'cat /proc/mtd',
+            'YAMON')
         # Empty 'Board Config'
-        stdout, stderr = self.ssh_command('md5sum /dev/mtd2ro')
-        self.assertIn(True, ["0dfbe8aa4c20b52e1b8bf3cb6cbdf193" in line
-                             for line in stdout])
+        self.ssh_command_output_contains(
+            'md5sum /dev/mtd2ro',
+            '0dfbe8aa4c20b52e1b8bf3cb6cbdf193')
 
     def check_mips_malta(self, endianess, kernel_path, uname_m):
         self.boot_debian_wheezy_image_and_ssh_login(endianess, kernel_path)
 
-        stdout, stderr = self.ssh_command('uname -a')
+        stdout, _ = self.ssh_command('uname -a')
         self.assertIn(True, [uname_m + " GNU/Linux" in line for line in stdout])
 
         self.run_common_commands()
         self.shutdown_via_ssh()
 
+    @skipUnless(PARAMIKO_AVAILABLE, "paramiko module not available")
     @skipIf(os.getenv('CONTINUOUS_INTEGRATION'), 'Running on Travis-CI')
     def test_mips_malta32eb_kernel3_2_0(self):
         """
@@ -186,6 +243,7 @@ class LinuxSSH(Test):
 
         self.check_mips_malta('be', kernel_path, 'mips')
 
+    @skipUnless(PARAMIKO_AVAILABLE, "paramiko module not available")
     @skipIf(os.getenv('CONTINUOUS_INTEGRATION'), 'Running on Travis-CI')
     def test_mips_malta32el_kernel3_2_0(self):
         """
@@ -201,6 +259,7 @@ class LinuxSSH(Test):
 
         self.check_mips_malta('le', kernel_path, 'mips')
 
+    @skipUnless(PARAMIKO_AVAILABLE, "paramiko module not available")
     @skipIf(os.getenv('CONTINUOUS_INTEGRATION'), 'Running on Travis-CI')
     def test_mips_malta64eb_kernel3_2_0(self):
         """
@@ -215,6 +274,7 @@ class LinuxSSH(Test):
         kernel_path = self.fetch_asset(kernel_url, asset_hash=kernel_hash)
         self.check_mips_malta('be', kernel_path, 'mips64')
 
+    @skipUnless(PARAMIKO_AVAILABLE, "paramiko module not available")
     @skipIf(os.getenv('CONTINUOUS_INTEGRATION'), 'Running on Travis-CI')
     def test_mips_malta64el_kernel3_2_0(self):
         """
