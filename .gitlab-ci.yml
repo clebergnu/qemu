@@ -1,7 +1,6 @@
-rhel-fedora-build-x86_64:
+build-x86_64:
   tags:
     - rhel
-    - fedora
   script:
     - ./configure --enable-werror --target-list="x86_64-softmmu"
     - make -j8
