@@ -3,4 +3,4 @@ rhel-build-x86_64:
     - rhel
   script:
     - ./configure --enable-werror --target-list="x86_64-softmmu"
-    - make
+    - make -j8
