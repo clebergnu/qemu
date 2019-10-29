@@ -4,6 +4,7 @@ rhel-build-x86_64:
   script:
     - ./configure --enable-werror --target-list="x86_64-softmmu"
     - make -j8
+    - make check
 
 fedora-build-x86_64:
   tags:
@@ -11,3 +12,4 @@ fedora-build-x86_64:
   script:
     - ./configure --enable-werror --target-list="x86_64-softmmu"
     - make -j8
+    - make check
