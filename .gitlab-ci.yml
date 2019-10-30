@@ -1,7 +1,26 @@
-build-x86_64:
+build-container-centos-7-x86_64:
   tags:
+    - x86_64
     - container
   image: quay.io/qemuci/centos7
+  script:
+    - ./configure --enable-werror --target-list="x86_64-softmmu"
+    - make -j8
+    - make check-acceptance
+
+build-rhel-8-x86_64:
+  tags:
+    - x86_64
+    - rhel-8
+  script:
+    - ./configure --enable-werror --target-list="x86_64-softmmu"
+    - make -j8
+    - make check-acceptance
+
+build-fedora-30-x86_64:
+  tags:
+    - x86_64
+    - rhel-8
   script:
     - ./configure --enable-werror --target-list="x86_64-softmmu"
     - make -j8
