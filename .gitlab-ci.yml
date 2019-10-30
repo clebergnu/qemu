@@ -1,8 +1,7 @@
 build-x86_64:
   tags:
     - container
-  image:
-    - quay.io/qemuci/centos7
+  image: quay.io/qemuci/centos7
   script:
     - ./configure --enable-werror --target-list="x86_64-softmmu"
     - make -j8
