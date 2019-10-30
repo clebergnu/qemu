@@ -20,7 +20,7 @@ build-rhel-8-x86_64:
 build-fedora-30-x86_64:
   tags:
     - x86_64
-    - rhel-8
+    - fedora-30
   script:
     - ./configure --enable-werror --target-list="x86_64-softmmu"
     - make -j8
