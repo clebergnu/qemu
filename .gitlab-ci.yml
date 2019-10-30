@@ -8,6 +8,16 @@ build-container-centos-7-x86_64:
     - make -j8
     - make check-acceptance
 
+build-container-debian-10-x86_64:
+  tags:
+    - x86_64
+    - container
+  image: quay.io/qemuci/debian10
+  script:
+    - ./configure --enable-werror --target-list="x86_64-softmmu"
+    - make -j8
+    - make check-acceptance
+
 build-rhel-8-x86_64:
   tags:
     - x86_64
