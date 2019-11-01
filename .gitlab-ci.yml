@@ -12,7 +12,7 @@ build-container-debian-10-x86_64:
   tags:
     - x86_64
     - container
-  image: quay.io/qemuci/debian10
+  image: quay.io/qemuci/debian-amd64-cross
   script:
     - ./configure --enable-werror --target-list="x86_64-softmmu"
     - make -j8
