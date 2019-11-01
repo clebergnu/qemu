@@ -16,7 +16,7 @@ build-container-debian-10-x86_64:
   script:
     - ./configure --enable-werror --target-list="x86_64-softmmu"
     - make -j8
-    - make check
+    - make check-acceptance
 
 build-rhel-8-x86_64:
   tags:
