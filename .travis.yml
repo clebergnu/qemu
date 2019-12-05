@@ -380,7 +380,8 @@ matrix:
           - libvdeplug-dev
           - libvte-2.91-dev
       env:
-        - TEST_CMD="make check check-tcg V=1"
+        - TEST_CMD="tests/check-block-060.sh"
+        - BASE_CONFIG="--disable-docs"
         - CONFIG="--disable-containers --target-list=${MAIN_SOFTMMU_TARGETS}"
 
     - arch: ppc64le
@@ -409,7 +410,8 @@ matrix:
           - libvdeplug-dev
           - libvte-2.91-dev
       env:
-        - TEST_CMD="make check check-tcg V=1"
+        - TEST_CMD="tests/check-block-060.sh"
+        - BASE_CONFIG="--disable-docs"
         - CONFIG="--disable-containers --target-list=${MAIN_SOFTMMU_TARGETS},ppc64le-linux-user"
 
     - arch: s390x
@@ -438,7 +440,8 @@ matrix:
           - libvdeplug-dev
           - libvte-2.91-dev
       env:
-        - TEST_CMD="make check check-tcg V=1"
+        - TEST_CMD="tests/check-block-060.sh"
+        - BASE_CONFIG="--disable-docs"
         - CONFIG="--disable-containers --target-list=${MAIN_SOFTMMU_TARGETS},s390x-linux-user"
 
     # Release builds
